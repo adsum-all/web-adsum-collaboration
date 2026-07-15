@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import {
   convertirItemEnCarte,
@@ -7,6 +7,7 @@ import {
   toggleChecklistItem,
 } from "../../lib/store.js";
 import type { ChecklistItem, Membre } from "../../lib/types.js";
+import { Popover } from "./Popover.js";
 
 interface Props {
   item: ChecklistItem;
@@ -28,6 +29,8 @@ export function ChecklistItemRow({ item, carteId, checklistId, membres, peutEdit
   const [menu, setMenu] = useState(false);
   const [picker, setPicker] = useState(false);
   const [busy, setBusy] = useState(false);
+  const pickerBtn = useRef<HTMLButtonElement | null>(null);
+  const menuBtn = useRef<HTMLButtonElement | null>(null);
   const assignes = item.assignes ?? [];
 
   async function run(p: Promise<unknown>): Promise<void> {
@@ -67,57 +70,56 @@ export function ChecklistItemRow({ item, carteId, checklistId, membres, peutEdit
       </label>
 
       {/* Assignee avatars ("petits bonhommes") */}
-      <div style={{ display: "flex", alignItems: "center", position: "relative", zIndex: picker ? 40 : undefined }}>
+      <div style={{ display: "flex", alignItems: "center" }}>
         {assignesMembres.slice(0, 3).map((m) => (
           <span key={m.id} className="avatar avatar-sm" title={m.nom}
             style={{ marginLeft: -6, border: "2px solid var(--surface, #fff)" }}>{m.initiales}</span>
         ))}
         {assignesMembres.length > 3 && <span className="muted small" style={{ marginLeft: 2 }}>+{assignesMembres.length - 3}</span>}
         {peutEditer && (
-          <button type="button" className="btn btn-ghost btn-inline" title="Assigner des personnes" disabled={busy}
+          <button ref={pickerBtn} type="button" className="btn btn-ghost btn-inline" title="Assigner des personnes" disabled={busy}
             style={{ marginLeft: 4, padding: "0 6px", fontSize: 13, lineHeight: "20px" }}
             onClick={() => { setPicker((v) => !v); setMenu(false); }}>
             {assignesMembres.length === 0 ? "+ qui ?" : "+"}
           </button>
         )}
-        {picker && (
-          <div className="mention-pop" style={{ position: "absolute", top: 26, right: 0, zIndex: 6, minWidth: 180 }}>
-            <span className="muted small" style={{ padding: "2px 8px" }}>Assigner (plusieurs possibles)</span>
-            {membres.map((m) => {
-              const on = assignes.includes(m.id);
-              return (
-                <button key={m.id} type="button" className="mention-item" disabled={busy} onClick={() => toggleAssigne(m.id)}
-                  style={on ? { fontWeight: 600 } : undefined}>
-                  <span className="avatar avatar-sm">{m.initiales}</span>
-                  <span>{m.nom}</span>
-                  {on && <span style={{ marginLeft: "auto" }}>OK</span>}
-                </button>
-              );
-            })}
-          </div>
-        )}
+        <Popover open={picker} anchor={pickerBtn.current} onClose={() => setPicker(false)} align="right" minWidth={200}>
+          <span className="muted small" style={{ display: "block", padding: "4px 10px" }}>Assigner (plusieurs possibles)</span>
+          {membres.length === 0 && <span className="muted small" style={{ display: "block", padding: "4px 10px" }}>Aucun membre dans cet espace.</span>}
+          {membres.map((m) => {
+            const on = assignes.includes(m.id);
+            return (
+              <button key={m.id} type="button" className="mention-item" disabled={busy} onClick={() => toggleAssigne(m.id)}
+                style={on ? { fontWeight: 600 } : undefined}>
+                <span className="avatar avatar-sm">{m.initiales}</span>
+                <span>{m.nom}</span>
+                {on && <span style={{ marginLeft: "auto" }}>OK</span>}
+              </button>
+            );
+          })}
+        </Popover>
       </div>
 
       {/* Overflow "..." menu: due date, convert, delete */}
       {peutEditer && (
-        <div style={{ position: "relative", zIndex: menu ? 40 : undefined }}>
-          <button type="button" className="btn btn-ghost btn-inline" title="Actions" disabled={busy}
+        <div style={{ display: "flex", alignItems: "center" }}>
+          <button ref={menuBtn} type="button" className="btn btn-ghost btn-inline" title="Actions" disabled={busy}
             style={{ padding: "0 8px", fontSize: 16, lineHeight: "20px" }}
             onClick={() => { setMenu((v) => !v); setPicker(false); }}>...</button>
-          {menu && (
-            <div className="mention-pop" style={{ position: "absolute", top: 26, right: 0, zIndex: 6, minWidth: 200, padding: 8 }}>
+          <Popover open={menu} anchor={menuBtn.current} onClose={() => setMenu(false)} align="right" minWidth={220}>
+            <div style={{ padding: 8 }}>
               <label className="muted small" style={{ display: "block", marginBottom: 6 }}>
                 Echeance
                 <input type="date" style={{ display: "block", width: "100%", marginTop: 2 }}
                   value={item.echeance ? item.echeance.slice(0, 10) : ""}
                   onChange={(e) => void run(modifierChecklistItem(item.id, { echeance: e.target.value ? new Date(e.target.value).toISOString() : null }))} />
               </label>
-              <button type="button" className="btn btn-ghost btn-inline" style={{ display: "block", width: "100%", textAlign: "left" }}
+              <button type="button" className="mention-item" style={{ width: "100%" }}
                 onClick={() => { setMenu(false); void run(convertirItemEnCarte(item.id)); }}>Convertir en carte</button>
-              <button type="button" className="btn btn-ghost btn-inline" style={{ display: "block", width: "100%", textAlign: "left", color: "var(--danger, #c0392b)" }}
+              <button type="button" className="mention-item" style={{ width: "100%", color: "var(--danger, #c0392b)" }}
                 onClick={() => { setMenu(false); void run(supprimerChecklistItem(item.id)); }}>Supprimer</button>
             </div>
-          )}
+          </Popover>
         </div>
       )}
     </li>

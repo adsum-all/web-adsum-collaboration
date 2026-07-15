@@ -19,6 +19,7 @@ import { peut, roleDansEspace } from "../../lib/permissions.js";
 import type { CarteProto, ColonneProto, Espace, Membre, TableauProto } from "../../lib/types.js";
 import { CarteModalProto } from "./CarteModalProto.js";
 import { CarteVue, echeanceLate, formatDate, libellePriorite } from "./CarteVue.js";
+import { ParticipantsTableau } from "./ParticipantsTableau.js";
 
 type Vue = "kanban" | "liste";
 
@@ -113,6 +114,13 @@ export function TableauPage({ espace, moiId, tableauId, carteInitiale = null, on
   useEffect(() => {
     void reload();
     void listMembres().then(setMembres);
+  }, [reload]);
+
+  // Near real-time board: refresh every 5 s so cards moved or added by others
+  // appear without a manual reload. The stale-response guard above keeps it safe.
+  useEffect(() => {
+    const id = window.setInterval(() => { void reload(); }, 5000);
+    return () => window.clearInterval(id);
   }, [reload]);
 
   // Near-real-time collaboration without a websocket stack: refetch when the tab
@@ -237,7 +245,13 @@ export function TableauPage({ espace, moiId, tableauId, carteInitiale = null, on
           <span className="badge badge-mut">
             {tableau.visibilite === "prive" ? "Privé" : "Visible espace"}
           </span>
-
+          {tableau.visibilite === "prive" && (
+            <ParticipantsTableau
+              espace={espace}
+              tableauId={tableauId}
+              peutGerer={role === "proprietaire" || role === "admin" || role === "membre"}
+            />
+          )}
         </div>
       </header>
 
@@ -265,8 +279,8 @@ export function TableauPage({ espace, moiId, tableauId, carteInitiale = null, on
         <select value={fAssigne} onChange={(e) => setFAssigne(e.target.value)} aria-label="Assigné">
           <option value="">Tous membres</option>
           {espace.membres.map((mm) => {
-            const m = membres.find((x) => x.id === mm.membre_id);
-            return <option key={mm.membre_id} value={mm.membre_id}>{m?.nom ?? mm.membre_id}</option>;
+            const nom = mm.nom || membres.find((x) => x.id === mm.membre_id)?.nom || mm.membre_id;
+            return <option key={mm.membre_id} value={mm.membre_id}>{nom}</option>;
           })}
         </select>
         <label className="switch-row" style={{ margin: 0 }}>

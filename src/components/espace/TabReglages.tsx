@@ -1,8 +1,10 @@
 import { useState } from "react";
 
 import {
+  type PolitiqueSuppression,
   createEtiquette,
   deleteEtiquette,
+  supprimerEspace,
   updateEspace,
   updateEtiquette,
 } from "../../lib/store.js";
@@ -30,6 +32,35 @@ export function TabReglages({ espace, roleReel, viewAs, onViewAs, onChanged }: P
   const peutGererEt = peut(espace, roleEffectif, "gerer_etiquettes");
   const peutModifier = peut(espace, roleEffectif, "gerer_membres");
   const estProprio = roleReel === "proprietaire";
+  const [suppr, setSuppr] = useState(false);
+  const [supprBusy, setSupprBusy] = useState(false);
+  const [supprErr, setSupprErr] = useState<string | null>(null);
+
+  async function executerSuppression(politique: PolitiqueSuppression): Promise<void> {
+    const libelle: Record<PolitiqueSuppression, string> = {
+      corbeille: "Mettre cet espace à la corbeille (récupérable pendant le délai de rétention) ?",
+      archiver: "Archiver cet espace et ses sous-espaces ?",
+      definitif_garder_canal: "Supprimer DÉFINITIVEMENT l'espace en CONSERVANT ses instructions (archives détachées) ? Cette action est irréversible.",
+      definitif: "Supprimer DÉFINITIVEMENT l'espace ET toutes ses instructions, tableaux et fichiers ? Cette action est irréversible.",
+    };
+    if (!window.confirm(libelle[politique])) return;
+    setSupprBusy(true);
+    setSupprErr(null);
+    try {
+      await supprimerEspace(espace.id, politique);
+      if (politique === "archiver") {
+        await onChanged();
+        setSuppr(false);
+      } else {
+        // The workspace no longer exists: return to the workspace list cleanly.
+        window.location.assign("/");
+      }
+    } catch (err) {
+      setSupprErr(err instanceof Error ? err.message : "Suppression impossible");
+    } finally {
+      setSupprBusy(false);
+    }
+  }
 
   async function enregistrerGeneral(): Promise<void> {
     setEnregistrement("cours");
@@ -210,22 +241,49 @@ export function TabReglages({ espace, roleReel, viewAs, onViewAs, onChanged }: P
       </section>
 
       {estProprio && (
-        <section className="card">
-          <h2 className="card-title">Archivage de l'espace</h2>
-          <p className="muted small">Réservé au propriétaire. L'espace n'apparaîtra plus dans la barre latérale.</p>
-          <button
-            type="button"
-            className="btn btn-danger"
-            onClick={() => {
-              if (window.confirm("Archiver définitivement cet espace ?")) {
-                void updateEspace(espace.id, { archive: true }).then(onChanged);
-              }
-            }}
-          >
-            Archiver l'espace
-          </button>
+        <section className="card" style={{ borderColor: "var(--adsum-danger, #c0392b)" }}>
+          <h2 className="card-title">Zone de danger, suppression de l'espace</h2>
+          <p className="muted small">
+            Réservé au propriétaire. Choisissez explicitement ce qu'il advient de l'espace, de ses sous-espaces et de son
+            canal d'instructions. Toute action est tracée dans le journal d'audit.
+          </p>
+          {!suppr ? (
+            <button type="button" className="btn btn-ghost" onClick={() => setSuppr(true)}>Supprimer ou archiver l'espace…</button>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <div style={{ display: "grid", gap: 8 }}>
+                <PolBtn titre="Archiver" desc="L'espace et ses sous-espaces sont masqués, sans rien supprimer. Réversible."
+                  disabled={supprBusy} onClick={() => void executerSuppression("archiver")} />
+                <PolBtn titre="Mettre à la corbeille" desc="Suppression différée, récupérable pendant le délai de rétention."
+                  disabled={supprBusy} onClick={() => void executerSuppression("corbeille")} />
+                <PolBtn titre="Supprimer en conservant les instructions" danger
+                  desc="L'espace est supprimé, mais ses instructions du canal sont conservées comme archives détachées."
+                  disabled={supprBusy} onClick={() => void executerSuppression("definitif_garder_canal")} />
+                <PolBtn titre="Supprimer définitivement (tout)" danger
+                  desc="Efface l'espace ET toutes ses instructions, tableaux et fichiers. Le webhook du bot est révoqué. Irréversible."
+                  disabled={supprBusy} onClick={() => void executerSuppression("definitif")} />
+              </div>
+              <p className="muted small" style={{ margin: 0 }}>Pour ne désactiver que le bot Telegram sans toucher à l'espace, utilisez « Dissocier le bot » dans le back-office (Bots et Telegram).</p>
+              {supprErr && <p className="small" style={{ color: "var(--adsum-danger, #c0392b)" }}>{supprErr}</p>}
+              <button type="button" className="btn btn-ghost btn-inline" disabled={supprBusy} onClick={() => setSuppr(false)}>Annuler</button>
+            </div>
+          )}
         </section>
       )}
     </div>
+  );
+}
+
+function PolBtn({ titre, desc, danger, disabled, onClick }: { titre: string; desc: string; danger?: boolean; disabled?: boolean; onClick: () => void }): JSX.Element {
+  return (
+    <button type="button" disabled={disabled} onClick={onClick}
+      style={{
+        textAlign: "left", padding: "10px 12px", borderRadius: 10, cursor: "pointer",
+        border: `1px solid ${danger ? "var(--adsum-danger, #c0392b)" : "var(--adsum-line, #e2e6ef)"}`,
+        background: "var(--adsum-panel, #fff)", color: "inherit", font: "inherit",
+      }}>
+      <strong style={{ color: danger ? "var(--adsum-danger, #c0392b)" : "inherit" }}>{titre}</strong>
+      <span className="muted small" style={{ display: "block", marginTop: 2 }}>{desc}</span>
+    </button>
   );
 }

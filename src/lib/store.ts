@@ -54,7 +54,9 @@ export function getEspace(id: string): Promise<Espace | null> {
 export function listMembres(): Promise<Membre[]> {
   return request(`${B}/membres`, { method: "GET" }, "Membres indisponibles");
 }
-export function createEspace(input: Pick<Espace, "nom" | "description" | "type" | "couleur">): Promise<Espace> {
+export function createEspace(
+  input: Pick<Espace, "nom" | "description" | "type" | "couleur"> & { parent_id?: string },
+): Promise<Espace> {
   return request(`${B}/espaces`, { method: "POST", body: jbody(input) }, "Espace non cree");
 }
 export function updateEspace(
@@ -67,6 +69,15 @@ export function toggleArchiveEspace(id: string, archive: boolean): Promise<void>
   return request(`${B}/espaces/${id}`, { method: "PATCH", body: jbody({ archive }) }, "Archivage impossible").then(
     () => undefined,
   );
+}
+// Deletion policy for a workspace (and its sub-spaces):
+//  corbeille = reversible trash (or immediate if retention is 0)
+//  definitif = erase the workspace AND all its canal instructions/boards/files
+//  definitif_garder_canal = erase the workspace but keep its canal as detached archives
+//  archiver = archive instead of deleting (reversible)
+export type PolitiqueSuppression = "corbeille" | "definitif" | "definitif_garder_canal" | "archiver";
+export function supprimerEspace(id: string, politique: PolitiqueSuppression = "corbeille"): Promise<Record<string, unknown>> {
+  return request(`${B}/espaces/${id}?politique=${politique}`, { method: "DELETE" }, "Suppression impossible");
 }
 
 // Members and access requests
@@ -146,6 +157,8 @@ export interface ActivitePubliee {
   espace_id: string | null;
   titre: string;
   type: string | null;
+  type_evenement_nom?: string | null;
+  couleur?: string | null;
   cible_type: string | null;
   debut: string | null;
   lieu: string | null;
@@ -164,6 +177,7 @@ export interface EvenementPayload {
   fin?: string;
   lieu?: string;
   type?: string;
+  type_evenement_id?: string | null;
   mode?: string;
   lien_session?: string;
   liens?: string[];
@@ -193,6 +207,7 @@ export interface EvenementDetail {
   id: string;
   titre: string;
   type: string | null;
+  type_evenement_id: string | null;
   volet: string;
   debut: string;
   fin: string | null;
@@ -243,6 +258,13 @@ export interface Cibles {
 }
 export function listCibles(): Promise<Cibles> {
   return request(`${B}/cibles`, { method: "GET" }, "Unités indisponibles");
+}
+
+// Published event types (catalogue) with their unique colour, for the planning
+// dropdown. Read from the shared reference endpoint (any authenticated member).
+export interface TypeEvenementRef { id: string; code: string; nom: string; couleur: string; description?: string | null }
+export function listTypesEvenements(): Promise<TypeEvenementRef[]> {
+  return request(`/api/v1/reference/types-evenements`, { method: "GET" }, "Types d'événements indisponibles");
 }
 
 // Activity attachments (images and files), shared with the back office.

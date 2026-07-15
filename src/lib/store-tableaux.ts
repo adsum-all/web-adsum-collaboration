@@ -5,7 +5,23 @@ import { request, jbody } from "./http.js";
 
 const B = "/api/v1/collaboration";
 
-export type ModeleTableau = "vide" | "activite" | "suivi" | "sprint";
+export type ModeleTableau = string;
+
+export interface ModeleColonne {
+  nom: string;
+  couleur: string | null;
+  wip: number | null;
+}
+export interface ModeleCatalogue {
+  id: string;
+  libelle: string;
+  description: string;
+  colonnes: ModeleColonne[];
+}
+
+export function listModelesCatalogue(): Promise<ModeleCatalogue[]> {
+  return request(`${B}/modeles-catalogue`, { method: "GET" }, "Modèles indisponibles");
+}
 
 export function listTableauxEspace(espaceId: string): Promise<TableauProto[]> {
   return request(`${B}/espaces/${espaceId}/tableaux`, { method: "GET" }, "Tableaux indisponibles");
@@ -33,6 +49,23 @@ export function toggleArchiveTableau(id: string, archive: boolean): Promise<void
 export function listTableauxArchives(espaceId: string): Promise<TableauProto[]> {
   return request(`${B}/espaces/${espaceId}/tableaux-archives`, { method: "GET" }, "Tableaux indisponibles");
 }
+// Board participants (Trello-style sharing of a private board).
+export interface ParticipantTableau {
+  utilisateur_id: string;
+  nom: string;
+  initiales: string;
+  role_espace: string | null;
+}
+export function listParticipantsTableau(tableauId: string): Promise<ParticipantTableau[]> {
+  return request(`${B}/tableaux-espace/${tableauId}/participants`, { method: "GET" }, "Participants indisponibles");
+}
+export function ajouterParticipantTableau(tableauId: string, utilisateurId: string): Promise<ParticipantTableau[]> {
+  return request(`${B}/tableaux-espace/${tableauId}/participants`, { method: "POST", body: jbody({ utilisateur_id: utilisateurId }) }, "Ajout impossible");
+}
+export function retirerParticipantTableau(tableauId: string, utilisateurId: string): Promise<ParticipantTableau[]> {
+  return request(`${B}/tableaux-espace/${tableauId}/participants/${utilisateurId}`, { method: "DELETE" }, "Retrait impossible");
+}
+
 export function createTableauDepuisModele(input: {
   espace_id: string;
   nom: string;

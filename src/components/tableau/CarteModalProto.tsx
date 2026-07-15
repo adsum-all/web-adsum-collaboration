@@ -105,7 +105,18 @@ export function CarteModalProto({ carte, espace, membres, moiId, onClose, onChan
   const peutCommenter = peut(espace, role, "commenter");
   const peutArchiver = peut(espace, role, "archiver");
   const peutPublier = peut(espace, role, "publier_evenement");
-  const membresEspace = membres.filter((m) => espace.membres.some((em) => em.membre_id === m.id));
+  // Assignee picker source: every member of the space, with their display name and
+  // initials carried by the space payload. We no longer intersect with the staff-only
+  // directory ("membres"), which hid non-staff space members from the picker.
+  const membresEspace: Membre[] = espace.membres.map((em) => {
+    const known = membres.find((m) => m.id === em.membre_id);
+    return {
+      id: em.membre_id,
+      nom: em.nom || known?.nom || em.membre_id,
+      initiales: em.initiales || known?.initiales || "?",
+      courriel: known?.courriel || "",
+    };
+  });
 
   useEffect(() => {
     void marquerCommentairesLus(carte.id).then(() => onChanged());
@@ -137,12 +148,11 @@ export function CarteModalProto({ carte, espace, membres, moiId, onClose, onChan
   const suggestions = useMemo(() => {
     if (!mentionOpen) return [];
     const frag = mentionFrag.trim().toLowerCase();
-    const membresEspace = membres.filter((m) => espace.membres.some((em) => em.membre_id === m.id));
     if (!frag) return membresEspace.slice(0, 6);
     return membresEspace
       .filter((m) => m.nom.toLowerCase().includes(frag) || m.courriel.toLowerCase().includes(frag))
       .slice(0, 6);
-  }, [mentionOpen, mentionFrag, membres, espace.membres]);
+  }, [mentionOpen, mentionFrag, membresEspace]);
 
   async function save(patch: Partial<CarteProto>): Promise<void> {
     await updateCarteProto(carte.id, patch);
@@ -166,7 +176,7 @@ export function CarteModalProto({ carte, espace, membres, moiId, onClose, onChan
   }
 
   function nomMembre(id: string): string {
-    return membres.find((m) => m.id === id)?.nom ?? id;
+    return membresEspace.find((m) => m.id === id)?.nom ?? membres.find((m) => m.id === id)?.nom ?? id;
   }
 
   function onComChange(v: string): void {
@@ -286,7 +296,7 @@ export function CarteModalProto({ carte, espace, membres, moiId, onClose, onChan
             <div>
               <span className="modal-section-titre">Assignés</span>
               <div className="et-picker">
-                {membres.filter((m) => espace.membres.some((em) => em.membre_id === m.id)).map((m) => {
+                {membresEspace.map((m) => {
                   const active = assignesLoc.includes(m.id);
                   return (
                     <button key={m.id} type="button" className={`membre-chip${active ? " membre-chip-on" : ""}`}

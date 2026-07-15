@@ -53,7 +53,11 @@ export function TabMembres({ espace, membres, moiId, roleEffectif, onChanged }: 
   }
 
   function nomMembre(id: string): string {
-    return membres.find((m) => m.id === id)?.nom ?? id;
+    return (
+      espace.membres.find((m) => m.membre_id === id)?.nom ||
+      membres.find((m) => m.id === id)?.nom ||
+      id
+    );
   }
 
   return (
