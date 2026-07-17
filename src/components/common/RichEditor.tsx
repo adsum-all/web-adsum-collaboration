@@ -48,8 +48,8 @@ export function RichEditor({ value, onChange, disabled }: Props): JSX.Element {
   }
 
   return (
-    <div style={{ border: "1px solid var(--border, #d7dbe3)", borderRadius: 10, overflow: "hidden" }}>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 4, padding: 6, borderBottom: "1px solid var(--border, #e2e2e2)", background: "var(--bg-soft, #f7f8fa)" }}>
+    <div style={{ border: "1px solid var(--adsum-line)", borderRadius: 10, overflow: "hidden" }}>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 4, padding: 6, borderBottom: "1px solid var(--adsum-line)", background: "var(--adsum-board)" }}>
         {TOOLS.map((t) => (
           <button
             key={t.label}

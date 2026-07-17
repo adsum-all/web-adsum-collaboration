@@ -22,9 +22,15 @@ const B = "/api/v1/collaboration";
 // effect, never on every render).
 export function initStore(session: Session): Promise<Membre | null> {
   setToken(session.token);
-  void chargerPermissions();
+  // Load the platform permissions and the member in parallel, but only surface the
+  // member (which triggers the first render) once the permissions are known. Otherwise
+  // the write-permission gates (peutEcrireCollaboration) evaluate against a null cache
+  // on the first paint and hide every write control until a later tick, even for a
+  // super_admin. chargerPermissions never rejects (it fails closed to an empty set).
+  const permissionsPrete = chargerPermissions();
   return resolveMe(session)
-    .then((m) => {
+    .then(async (m) => {
+      await permissionsPrete;
       setMe(m);
       return m;
     })
@@ -54,7 +60,9 @@ export function getEspace(id: string): Promise<Espace | null> {
 export function listMembres(): Promise<Membre[]> {
   return request(`${B}/membres`, { method: "GET" }, "Membres indisponibles");
 }
-export function createEspace(input: Pick<Espace, "nom" | "description" | "type" | "couleur">): Promise<Espace> {
+export function createEspace(
+  input: Pick<Espace, "nom" | "description" | "type" | "couleur"> & { parent_id?: string },
+): Promise<Espace> {
   return request(`${B}/espaces`, { method: "POST", body: jbody(input) }, "Espace non cree");
 }
 export function updateEspace(
@@ -67,6 +75,15 @@ export function toggleArchiveEspace(id: string, archive: boolean): Promise<void>
   return request(`${B}/espaces/${id}`, { method: "PATCH", body: jbody({ archive }) }, "Archivage impossible").then(
     () => undefined,
   );
+}
+// Deletion policy for a workspace (and its sub-spaces):
+//  corbeille = reversible trash (or immediate if retention is 0)
+//  definitif = erase the workspace AND all its canal instructions/boards/files
+//  definitif_garder_canal = erase the workspace but keep its canal as detached archives
+//  archiver = archive instead of deleting (reversible)
+export type PolitiqueSuppression = "corbeille" | "definitif" | "definitif_garder_canal" | "archiver";
+export function supprimerEspace(id: string, politique: PolitiqueSuppression = "corbeille"): Promise<Record<string, unknown>> {
+  return request(`${B}/espaces/${id}?politique=${politique}`, { method: "DELETE" }, "Suppression impossible");
 }
 
 // Members and access requests
@@ -146,6 +163,8 @@ export interface ActivitePubliee {
   espace_id: string | null;
   titre: string;
   type: string | null;
+  type_evenement_nom?: string | null;
+  couleur?: string | null;
   cible_type: string | null;
   debut: string | null;
   lieu: string | null;
@@ -164,6 +183,7 @@ export interface EvenementPayload {
   fin?: string;
   lieu?: string;
   type?: string;
+  type_evenement_id?: string | null;
   mode?: string;
   lien_session?: string;
   liens?: string[];
@@ -193,6 +213,7 @@ export interface EvenementDetail {
   id: string;
   titre: string;
   type: string | null;
+  type_evenement_id: string | null;
   volet: string;
   debut: string;
   fin: string | null;
@@ -245,6 +266,31 @@ export function listCibles(): Promise<Cibles> {
   return request(`${B}/cibles`, { method: "GET" }, "Unités indisponibles");
 }
 
+// Administrable destinations referential (cible_activite): the audience picker
+// loads its list from here, so a destination added, renamed or deactivated by an
+// administrator is reflected in this form without any code change.
+export interface CibleActiviteRef {
+  code: string;
+  libelle: string;
+  description: string | null;
+  categorie: string;
+  type_regle: string;
+  besoin_unite: boolean;
+  ordre: number;
+  statut: string;
+  parametres: { table?: string; attribut?: string; fonction_cles?: string[]; toutes_fonctions?: boolean };
+}
+export function listCiblesActivite(): Promise<CibleActiviteRef[]> {
+  return request(`/api/v1/reference/cibles-activite`, { method: "GET" }, "Destinations indisponibles");
+}
+
+// Published event types (catalogue) with their unique colour, for the planning
+// dropdown. Read from the shared reference endpoint (any authenticated member).
+export interface TypeEvenementRef { id: string; code: string; nom: string; couleur: string; description?: string | null }
+export function listTypesEvenements(): Promise<TypeEvenementRef[]> {
+  return request(`/api/v1/reference/types-evenements`, { method: "GET" }, "Types d'événements indisponibles");
+}
+
 // Activity attachments (images and files), shared with the back office.
 export interface PieceEvenement {
   id: string;
@@ -286,6 +332,15 @@ export async function chargerPermissions(): Promise<void> {
   }
 }
 export function peutGererActivites(): boolean {
+  return (_permissions ?? []).includes("collaboration.gerer");
+}
+
+// Any collaboration write (create/edit a board, a card, a comment, a checklist, a
+// piece) requires the platform permission collaboration.gerer on the server, ON TOP
+// of the space role. A space member holding only collaboration.superviser (e.g. the
+// direction role) must therefore see read-only surfaces: the UI gates every write
+// action with this so it never offers a button that the API will refuse with 403.
+export function peutEcrireCollaboration(): boolean {
   return (_permissions ?? []).includes("collaboration.gerer");
 }
 

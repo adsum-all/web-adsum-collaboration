@@ -4,26 +4,30 @@ import {
   accepterDemande,
   addMembreEspace,
   changeRoleMembre,
+  peutEcrireCollaboration,
   refuserDemande,
   removeMembreEspace,
 } from "../../lib/store.js";
-import { libelleRole, peut } from "../../lib/permissions.js";
+import { libelleRole, peut, roleDansEspace } from "../../lib/permissions.js";
 import type { Espace, Membre, RoleEspace } from "../../lib/types.js";
 
 interface Props {
   espace: Espace;
   membres: Membre[];
   moiId: string;
-  roleEffectif: RoleEspace | null;
   onChanged: () => void;
 }
 
 const ROLES: RoleEspace[] = ["proprietaire", "admin", "membre", "observateur"];
 
-export function TabMembres({ espace, membres, moiId, roleEffectif, onChanged }: Props): JSX.Element {
+export function TabMembres({ espace, membres, moiId, onChanged }: Props): JSX.Element {
   const [recherche, setRecherche] = useState("");
   const [copied, setCopied] = useState(false);
-  const peutGerer = peut(espace, roleEffectif, "gerer_membres");
+  // Managing members writes on the server, so it needs the platform manage grant
+  // (peutEcrireCollaboration) on top of the space role. Gate on the REAL role, never
+  // on a previewed viewAs role, so a supervise-only account never sees a 403 button.
+  const roleReel = roleDansEspace(espace, moiId);
+  const peutGerer = peutEcrireCollaboration() && peut(espace, roleReel, "gerer_membres");
 
   const dansEspace = new Set(espace.membres.map((m) => m.membre_id));
   const candidats = useMemo(
@@ -53,7 +57,11 @@ export function TabMembres({ espace, membres, moiId, roleEffectif, onChanged }: 
   }
 
   function nomMembre(id: string): string {
-    return membres.find((m) => m.id === id)?.nom ?? id;
+    return (
+      espace.membres.find((m) => m.membre_id === id)?.nom ||
+      membres.find((m) => m.id === id)?.nom ||
+      id
+    );
   }
 
   return (

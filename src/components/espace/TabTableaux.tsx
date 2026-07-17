@@ -1,6 +1,13 @@
 import { useEffect, useState } from "react";
 
-import { createTableauDepuisModele, listTableauxEspace, updateTableauProto, type ModeleTableau } from "../../lib/store.js";
+import {
+  createTableauDepuisModele,
+  listModelesCatalogue,
+  listTableauxEspace,
+  peutEcrireCollaboration,
+  updateTableauProto,
+  type ModeleCatalogue,
+} from "../../lib/store.js";
 import { peut, roleDansEspace } from "../../lib/permissions.js";
 import type { Espace, TableauProto, VisibiliteTableau } from "../../lib/types.js";
 import { EmptyState } from "../common/EmptyState.js";
@@ -11,13 +18,6 @@ interface Props {
   onOuvrir: (id: string) => void;
 }
 
-const MODELES: Array<{ key: ModeleTableau; label: string; description: string }> = [
-  { key: "vide", label: "Vide", description: "3 colonnes : À faire · En cours · Terminé" },
-  { key: "activite", label: "Préparation d'activité", description: "Idées · Préparation · Validation · Réalisée" },
-  { key: "suivi", label: "Suivi simple", description: "Backlog · En cours (WIP 3) · Bloqué · Terminé" },
-  { key: "sprint", label: "Sprint", description: "Sprint · En cours (WIP 5) · Revue · Publié" },
-];
-
 export function TabTableaux({ espace, moiId, onOuvrir }: Props): JSX.Element {
   const [tableaux, setTableaux] = useState<TableauProto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -25,10 +25,14 @@ export function TabTableaux({ espace, moiId, onOuvrir }: Props): JSX.Element {
   const [nom, setNom] = useState("");
   const [description, setDescription] = useState("");
   const [visibilite, setVisibilite] = useState<VisibiliteTableau>("espace");
-  const [modele, setModele] = useState<ModeleTableau>("vide");
+  const [modele, setModele] = useState<string>("vide");
+  const [catalogue, setCatalogue] = useState<ModeleCatalogue[]>([]);
 
   const role = roleDansEspace(espace, moiId);
-  const peutCreer = peut(espace, role, "creer_carte");
+  // Creating a board writes on the server (require collaboration.gerer), so the
+  // button needs the platform write permission AND the space role, not the role alone.
+  const ecritCollab = peutEcrireCollaboration();
+  const peutCreer = ecritCollab && peut(espace, role, "creer_carte");
 
   async function reload(): Promise<void> {
     setLoading(true);
@@ -40,6 +44,10 @@ export function TabTableaux({ espace, moiId, onOuvrir }: Props): JSX.Element {
   useEffect(() => {
     void reload();
   }, [espace.id]);
+
+  useEffect(() => {
+    void listModelesCatalogue().then(setCatalogue).catch(() => undefined);
+  }, []);
 
   async function creer(): Promise<void> {
     if (!nom.trim()) return;
@@ -60,6 +68,11 @@ export function TabTableaux({ espace, moiId, onOuvrir }: Props): JSX.Element {
 
   return (
     <div>
+      {peutCreer && !espace.parent_id && (
+        <p className="muted" style={{ fontSize: 12.5, margin: "0 0 10px", padding: "8px 12px", background: "var(--collab-tint, #eef3fc)", borderRadius: 10 }}>
+          Astuce d'organisation : dans un espace principal, préférez créer un <strong>sous-espace</strong> (bouton « + Sous-espace » en haut) pour regrouper des tableaux liés, plutôt que d'accumuler tous les tableaux ici.
+        </p>
+      )}
       {peutCreer && (
         <section className="card">
           {creation ? (
@@ -84,23 +97,28 @@ export function TabTableaux({ espace, moiId, onOuvrir }: Props): JSX.Element {
                 <span>Tableau privé (visible seulement pour ses participants)</span>
               </label>
               <div style={{ marginTop: 10 }}>
-                <span className="modal-section-titre">Modèle</span>
-                <div className="et-picker">
-                  {MODELES.map((m) => (
+                <span className="modal-section-titre">Partir d'un modèle ou de zéro</span>
+                <div className="modele-grid">
+                  {catalogue.map((m) => (
                     <button
-                      key={m.key}
+                      key={m.id}
                       type="button"
-                      className={`membre-chip${modele === m.key ? " membre-chip-on" : ""}`}
-                      onClick={() => setModele(m.key)}
-                      title={m.description}
+                      className={`modele-carte${modele === m.id ? " modele-carte-on" : ""}`}
+                      onClick={() => setModele(m.id)}
                     >
-                      <span>{m.label}</span>
+                      <span className="modele-libelle">{m.libelle}</span>
+                      <span className="modele-desc">{m.description}</span>
+                      <span className="modele-colonnes">
+                        {m.colonnes.map((c, i) => (
+                          <span key={i} className="modele-col" title={c.wip ? `${c.nom} (WIP ${c.wip})` : c.nom}>
+                            <span className="modele-col-dot" style={{ background: c.couleur ?? "var(--adsum-line)" }} />
+                            {c.nom}{c.wip ? ` · ${c.wip}` : ""}
+                          </span>
+                        ))}
+                      </span>
                     </button>
                   ))}
                 </div>
-                <p className="muted small" style={{ marginTop: 4 }}>
-                  {MODELES.find((m) => m.key === modele)?.description}
-                </p>
               </div>
 
               <div className="modal-actions" style={{ marginTop: 10 }}>
@@ -144,15 +162,17 @@ export function TabTableaux({ espace, moiId, onOuvrir }: Props): JSX.Element {
                     </span>
                   </span>
                 </button>
-                <button
-                  type="button"
-                  className="tile-fav"
-                  aria-pressed={t.favori}
-                  aria-label={t.favori ? "Retirer des favoris" : "Ajouter aux favoris"}
-                  onClick={() => void toggleFavori(t)}
-                >
-                  {t.favori ? "★" : "☆"}
-                </button>
+                {ecritCollab && (
+                  <button
+                    type="button"
+                    className="tile-fav"
+                    aria-pressed={t.favori}
+                    aria-label={t.favori ? "Retirer des favoris" : "Ajouter aux favoris"}
+                    onClick={() => void toggleFavori(t)}
+                  >
+                    {t.favori ? "★" : "☆"}
+                  </button>
+                )}
               </div>
             ))}
         </div>

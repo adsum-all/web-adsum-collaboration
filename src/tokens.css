@@ -62,6 +62,17 @@
   --adsum-danger-bg: #fae9e7;
   --adsum-info: #2a4fad;
   --adsum-info-bg: #eef3fc;
+
+  /* Legacy collaboration aliases: several inline component styles reference
+     --collab-* tokens that were never defined and fell back to hardcoded hex,
+     drifting from the design system. Alias them onto the real --adsum-* tokens so
+     everything shares one palette and follows the theme (light/dark) correctly. */
+  --collab-accent: var(--adsum-acc);
+  --collab-line: var(--adsum-line);
+  --collab-muted: var(--adsum-mut);
+  --collab-card: var(--adsum-panel);
+  --collab-panel: var(--adsum-panel);
+  --collab-tint: var(--adsum-info-bg);
 }
 
 [data-theme="dark"] {

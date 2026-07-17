@@ -1,13 +1,12 @@
 import { useEffect, useState } from "react";
 
 import { type Session } from "./api.js";
-import { Board } from "./components/Board.js";
-import { BoardList } from "./components/BoardList.js";
 import { Login } from "./components/Login.js";
 import { EspacePage } from "./components/espace/EspacePage.js";
 import { EmptyState } from "./components/common/EmptyState.js";
 import { RaccourcisModal } from "./components/common/RaccourcisModal.js";
 import { CalendrierPage } from "./components/calendrier/CalendrierPage.js";
+import { CanalPage } from "./components/canal/CanalPage.js";
 import { NotificationsPage } from "./components/notifications/NotificationsPage.js";
 import { ProfilPage } from "./components/profil/ProfilPage.js";
 import { Home } from "./components/home/Home.js";
@@ -16,7 +15,8 @@ import { GlobalSearch } from "./components/search/GlobalSearch.js";
 import { Sidebar, type Route } from "./components/shell/Sidebar.js";
 import { Topbar } from "./components/shell/Topbar.js";
 import { TableauPage } from "./components/tableau/TableauPage.js";
-import { initStore, listEspaces, listNotifications, rejoindreEspace, resetStore } from "./lib/store.js";
+import { compteurCanal } from "./lib/store-canal.js";
+import { getEspace, initStore, listEspaces, listNotifications, rejoindreEspace, resetStore } from "./lib/store.js";
 import type { Espace, Membre } from "./lib/types.js";
 import { clearSession, loadSession, saveSession } from "./session.js";
 
@@ -24,7 +24,6 @@ export function App(): JSX.Element {
   const [session, setSession] = useState<Session | null>(() => loadSession());
   const [route, setRoute] = useState<Route>({ kind: "accueil" });
   const [espaces, setEspaces] = useState<Espace[]>([]);
-  const [boardId, setBoardId] = useState<string | null>(null);
   const [nbNotifs, setNbNotifs] = useState(0);
   const [tick, setTick] = useState(0);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -32,6 +31,23 @@ export function App(): JSX.Element {
   const [helpOpen, setHelpOpen] = useState(false);
   const [me, setMe] = useState<Membre | null>(null);
   const [rejoindreMsg, setRejoindreMsg] = useState<string | null>(null);
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
+    try { return localStorage.getItem("adsum.collab.sidebar.collapsed") === "1"; } catch { return false; }
+  });
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [nbCanal, setNbCanal] = useState(0);
+  // A sub-space (or any space not in the top-level list) is loaded on demand by id
+  // so it opens as a full page, exactly like a general workspace.
+  const [fetchedEspace, setFetchedEspace] = useState<Espace | null>(null);
+  const [fetchEspaceState, setFetchEspaceState] = useState<"idle" | "loading" | "error">("idle");
+  const toggleCollapse = (): void => {
+    setCollapsed((v) => {
+      const next = !v;
+      try { localStorage.setItem("adsum.collab.sidebar.collapsed", next ? "1" : "0"); } catch { /* ignore */ }
+      return next;
+    });
+  };
+  const navigate = (r: Route): void => { setRoute(r); setDrawerOpen(false); };
 
   const reloadEspaces = (): void => {
     void listEspaces().then(setEspaces);
@@ -85,7 +101,34 @@ export function App(): JSX.Element {
   useEffect(() => {
     if (!session) return;
     void listNotifications().then((n) => setNbNotifs(n.filter((x) => !x.lue).length));
+    void compteurCanal().then((c) => setNbCanal(c.nouveaux)).catch(() => undefined);
+    // Near real-time: refresh the workspaces on every 5 s tick too, so an open
+    // space, sub-space or its members reflect changes without a manual reload
+    // (the sub-space fetch effect already re-runs on tick).
+    void listEspaces().then(setEspaces).catch(() => undefined);
   }, [session, tick, route]);
+
+  // Load the targeted space on demand when it is not a top-level space (i.e. a
+  // sub-space): the top-level list only carries lightweight sub-space stubs, so
+  // the full object (members, tableaux, settings) must be fetched to render its
+  // full page. Refreshes on tick to stay in sync like the top-level spaces.
+  useEffect(() => {
+    if (!session) { setFetchedEspace(null); setFetchEspaceState("idle"); return; }
+    const targetId =
+      route.kind === "espace" ? route.id : route.kind === "tableau" ? route.espaceId : null;
+    if (!targetId || espaces.some((e) => e.id === targetId)) {
+      setFetchedEspace(null);
+      setFetchEspaceState("idle");
+      return;
+    }
+    let alive = true;
+    if (fetchedEspace?.id !== targetId) setFetchEspaceState("loading");
+    void getEspace(targetId)
+      .then((e) => { if (alive) { setFetchedEspace(e); setFetchEspaceState(e ? "idle" : "error"); } })
+      .catch(() => { if (alive) { setFetchedEspace(null); setFetchEspaceState("error"); } });
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session, route, espaces, tick]);
 
   useEffect(() => {
     if (!session) return;
@@ -123,42 +166,51 @@ export function App(): JSX.Element {
     resetStore();
     setSession(null);
     setEspaces([]);
-    setBoardId(null);
   }
 
   if (!session) {
     return <Login onAuth={onAuth} />;
   }
 
+  const targetEspaceId =
+    route.kind === "espace" ? route.id : route.kind === "tableau" ? route.espaceId : null;
   const espaceCourant =
-    route.kind === "espace"
-      ? espaces.find((e) => e.id === route.id) ?? null
-      : route.kind === "tableau"
-        ? espaces.find((e) => e.id === route.espaceId) ?? null
-        : null;
+    (targetEspaceId
+      ? espaces.find((e) => e.id === targetEspaceId)
+        ?? (fetchedEspace && fetchedEspace.id === targetEspaceId ? fetchedEspace : null)
+      : null) ?? null;
+  // A sub-space is being fetched: show a loading state, not "access refused".
+  const espaceEnChargement = !!targetEspaceId && !espaceCourant && fetchEspaceState === "loading";
+  // Parent workspace of the current sub-space (top-level, so it is in the list),
+  // for the breadcrumb that tells the user exactly where they are.
+  const parentEspace = espaceCourant?.parent_id
+    ? espaces.find((e) => e.id === espaceCourant.parent_id) ?? null
+    : null;
 
   const crumbTitle = crumbFor(route, espaceCourant);
 
   return (
-    <div className="shell">
+    <div className={`shell${collapsed ? " shell-collapsed" : ""}${drawerOpen ? " shell-drawer-open" : ""}`}>
       <Sidebar
-        espaces={espaces}
         route={route}
-        onNavigate={(r) => {
-          setRoute(r);
-          setBoardId(null);
-        }}
+        onNavigate={navigate}
         currentInitials={me?.initiales ?? "AD"}
         currentNom={me?.nom ?? "Membre"}
         onQuitter={onQuitter}
         nbNotifsNonLues={nbNotifs}
+        nbCanalNouveaux={nbCanal}
+        collapsed={collapsed}
+        onToggleCollapse={toggleCollapse}
+        onCloseDrawer={() => setDrawerOpen(false)}
       />
+      {drawerOpen && <div className="shell-scrim" onClick={() => setDrawerOpen(false)} aria-hidden="true" />}
       <div className="main">
         <Topbar
           crumb={crumbTitle.crumb}
           title={crumbTitle.title}
           onSearch={(q) => { setSearchQ(q); setSearchOpen(true); }}
           onOpenSearch={() => { setSearchQ(""); setSearchOpen(true); }}
+          onOpenMenu={() => setDrawerOpen(true)}
         />
         <div className="main-scroll">
           {rejoindreMsg && (
@@ -183,6 +235,9 @@ export function App(): JSX.Element {
           {route.kind === "calendrier" && (
             <CalendrierPage onOuvrirCarte={(espaceId, tableauId, carteId) => setRoute({ kind: "tableau", espaceId, id: tableauId, carteId })} />
           )}
+          {route.kind === "canal" && (
+            <CanalPage />
+          )}
           {route.kind === "notifications" && (
             <NotificationsPage onOuvrirEspace={(id) => setRoute({ kind: "espace", id })} />
           )}
@@ -192,8 +247,10 @@ export function App(): JSX.Element {
           {route.kind === "espace" && espaceCourant && (
             <EspacePage
               espace={espaceCourant}
+              parent={parentEspace}
               moiId={me?.id ?? ""}
               onChanged={reloadEspaces}
+              onOuvrirEspace={(id) => setRoute({ kind: "espace", id })}
               onOuvrirTableau={(id) => setRoute({ kind: "tableau", espaceId: espaceCourant.id, id })}
               onOuvrirCarte={(espaceId, tableauId, carteId) => setRoute({ kind: "tableau", espaceId, id: tableauId, carteId })}
             />
@@ -209,15 +266,14 @@ export function App(): JSX.Element {
             />
           )}
           {((route.kind === "espace" || route.kind === "tableau") && !espaceCourant) && (
-            <div className="page">
-              <EmptyState titre="Accès refusé" description="Vous n'êtes pas membre de cet espace." />
-            </div>
+            espaceEnChargement ? (
+              <div className="page muted">Chargement de l'espace…</div>
+            ) : (
+              <div className="page">
+                <EmptyState titre="Accès refusé" description="Vous n'êtes pas membre de cet espace." />
+              </div>
+            )
           )}
-          {route.kind === "comite" && (boardId ? (
-            <Board token={session.token} boardId={boardId} />
-          ) : (
-            <BoardList token={session.token} onOpen={setBoardId} />
-          ))}
         </div>
       </div>
       {searchOpen && (
@@ -237,20 +293,20 @@ export function App(): JSX.Element {
 function crumbFor(route: Route, espace: Espace | null): { crumb: string; title: string } {
   switch (route.kind) {
     case "accueil":
-      return { crumb: "ADSUM COLLABORATION", title: "Accueil" };
+      return { crumb: "COLLABORATION", title: "Espaces de travail" };
     case "mes-cartes":
       return { crumb: "PERSONNEL", title: "Mes cartes" };
     case "calendrier":
       return { crumb: "PERSONNEL", title: "Calendrier" };
+    case "canal":
+      return { crumb: "COLLABORATION", title: "Canal d'instructions" };
     case "notifications":
       return { crumb: "PERSONNEL", title: "Notifications" };
     case "profil":
       return { crumb: "PERSONNEL", title: "Mon profil" };
     case "espace":
-      return { crumb: "ESPACE", title: espace?.nom ?? "Espace" };
+      return { crumb: espace?.parent_id ? "SOUS-ESPACE" : "ESPACE", title: espace?.nom ?? "Espace" };
     case "tableau":
       return { crumb: espace?.nom.toUpperCase() ?? "TABLEAU", title: "Tableau" };
-    case "comite":
-      return { crumb: "SYSTÈME", title: "Comité (serveur)" };
   }
 }

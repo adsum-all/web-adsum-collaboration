@@ -15,6 +15,8 @@ export interface Membre {
 export interface MembreEspace {
   membre_id: string;
   role: RoleEspace;
+  nom: string;
+  initiales: string;
 }
 
 export interface Etiquette {
@@ -22,6 +24,14 @@ export interface Etiquette {
   nom: string;
   couleur: string;
   par_defaut: boolean;
+}
+
+export interface SousEspace {
+  id: string;
+  nom: string;
+  couleur: string;
+  initiale: string;
+  archive: boolean;
 }
 
 export interface Espace {
@@ -37,6 +47,16 @@ export interface Espace {
   archive: boolean;
   invitation_jeton: string;
   demandes_acces: DemandeAcces[];
+  // Hierarchy: parent workspace (null for a top-level space) and, for a top-level
+  // space, its sub-spaces. A sub-space never contains sub-spaces (depth 1).
+  parent_id: string | null;
+  sous_espaces: SousEspace[];
+  // Dedicated instruction bot of this general workspace (separate from the member
+  // notification bot). Status: non_configure / demande / configure. The deep link /
+  // QR are set only once the workspace's own bot is configured.
+  instruction_bot_statut: string;
+  instruction_bot_username: string | null;
+  telegram_deep_link: string | null;
 }
 
 export interface DemandeAcces {
@@ -165,4 +185,107 @@ export interface HabillageColonneServeur {
   couleur: string | null;
   repliee: boolean;
   wip: number | null;
+}
+
+// Moderator channel (Canal Moderateur): voice-note driven instruction requests.
+export type CanalCategorie =
+  | "projet"
+  | "activite"
+  | "organisation"
+  | "communication"
+  | "urgence"
+  | "autre";
+export type CanalStatut = "nouveau" | "en_cours" | "traite" | "archive";
+export type TranscriptionStatut = "aucune" | "en_cours" | "prete" | "echec";
+
+export interface CanalPiece {
+  id: string;
+  nom: string;
+  taille: number;
+  type: string;
+  cree_le: string | null;
+  data_url: string | null;
+  duree_s: number | null;
+  est_audio: boolean;
+}
+
+export interface CanalReponse {
+  id: string;
+  auteur_id: string;
+  corps: string;
+  cree_le: string | null;
+}
+
+export interface CanalNote {
+  id: string;
+  ordre: number;
+  audio: CanalPiece | null;
+  transcription_brute: string;
+  transcription_redigee: string;
+  transcription_statut: TranscriptionStatut;
+  transcription_erreur: string | null;
+  audio_conserver: boolean;
+  audio_expire_jours: number | null;
+  cree_le: string | null;
+}
+
+export interface CanalLien {
+  id: string;
+  sujet: string;
+  priorite: Priorite;
+  statut: CanalStatut;
+  cree_le: string | null;
+}
+
+export interface CanalMessage {
+  id: string;
+  auteur_id: string;
+  espace_id: string | null;
+  espace_nom: string | null;
+  assigne_id: string | null;
+  carte_id: string | null;
+  parent_id: string | null;
+  categorie: CanalCategorie;
+  priorite: Priorite;
+  statut: CanalStatut;
+  sujet: string;
+  note: string;
+  // First-note mirror kept for backward compatibility; the UI uses `notes`.
+  transcription_brute: string;
+  transcription_redigee: string;
+  transcription_statut: TranscriptionStatut;
+  transcription_erreur: string | null;
+  audio: CanalPiece | null;
+  audio_conserver: boolean;
+  audio_expire_jours: number | null;
+  notes: CanalNote[];
+  parent: CanalLien | null;
+  enfants: CanalLien[];
+  pieces: CanalPiece[];
+  reponses: CanalReponse[];
+  cree_le: string | null;
+  // Instruction workflow.
+  matricule: string | null;
+  etape: EtapeInstruction;
+  prise_en_charge_par: string | null;
+  prise_en_charge_nom: string | null;
+  prise_en_charge_le: string | null;
+  assigne_espace_id: string | null;
+  assigne_espace_nom: string | null;
+  assignes: string[];
+  restitution_rapport: string | null;
+  restitution_resume: string | null;
+  cloture_le: string | null;
+  cloture_par: string | null;
+}
+
+export type EtapeInstruction =
+  | "recue" | "transcrite" | "redigee" | "a_qualifier" | "prise_en_charge"
+  | "affectee" | "chargee" | "en_traitement" | "traitee" | "restituee" | "a_verifier" | "cloturee";
+
+export interface EtapeWorkflow {
+  etape: string;
+  detail: string | null;
+  acteur: string | null;
+  cree_le: string | null;
 }

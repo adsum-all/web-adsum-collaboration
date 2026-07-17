@@ -171,19 +171,23 @@ export function CalendrierPage({ scopeEspaceId = null, onOuvrirCarte }: Props): 
                   if (item.kind === "activite") {
                     const a = item.act;
                     const esp = espaceOf(a.espace_id);
-                    // Every activity opens the same editor, whatever app created it
-                    // (parity with the back office). Coloured by its space when it
-                    // came from a card, otherwise the accent colour: never greyed.
+                    // UNIVERSAL colour, identical to the back office and the member app:
+                    // the administrable event-type colour when set, otherwise a single
+                    // shared neutral (#64748B). Space info stays available in the drawer.
+                    const fond = a.couleur ?? "#64748B";
+                    const typeLabel = a.type_evenement_nom ? " · " + a.type_evenement_nom : "";
                     return (
                       <button
                         key={`a-${a.id}`}
                         type="button"
                         className="cal-event cal-event-activite"
-                        style={{ background: esp?.couleur ?? "#2a4fad", color: "#fff", cursor: "pointer" }}
+                        style={{ background: fond, color: "#fff", cursor: "pointer" }}
                         onClick={() => setActiviteOuverte(a.id)}
-                        title={`Activité${esp ? " · " + esp.nom : ""} · ${a.titre} (cliquer pour éditer)`}
+                        title={`Activité${typeLabel}${esp ? " · " + esp.nom : ""} · ${a.titre} (cliquer pour éditer)`}
                       >
-                        <span className="cal-event-titre">◆ {a.titre}</span>
+                        <span className="cal-event-titre">
+                          {a.type_evenement_nom && <strong>{a.type_evenement_nom} · </strong>}◆ {a.titre}
+                        </span>
                       </button>
                     );
                   }

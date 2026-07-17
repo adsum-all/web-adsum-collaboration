@@ -6,6 +6,7 @@ import "./tokens.css";
 import "./styles.css";
 import "./shell.css";
 import "./kanban.css";
+import "./canal.css";
 
 const root = document.getElementById("root");
 if (root) {

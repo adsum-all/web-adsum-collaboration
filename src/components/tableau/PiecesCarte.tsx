@@ -1,7 +1,8 @@
 import { useRef, useState } from "react";
 
 import { definirCouverture, supprimerPiece, uploadCartePiece } from "../../lib/store.js";
-import type { CarteProto } from "../../lib/types.js";
+import type { CarteProto, PieceJointe } from "../../lib/types.js";
+import { ApercuPiece, downloadUrl } from "./ApercuPiece.js";
 
 interface Props {
   carte: CarteProto;
@@ -27,6 +28,7 @@ export function PiecesCarte({ carte, peutEditer, onChanged }: Props): JSX.Elemen
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [drag, setDrag] = useState(false);
+  const [apercu, setApercu] = useState<PieceJointe | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   async function envoyer(files: FileList | File[]): Promise<void> {
@@ -103,30 +105,35 @@ export function PiecesCarte({ carte, peutEditer, onChanged }: Props): JSX.Elemen
         {carte.pieces.length === 0 && <p className="muted small" style={{ margin: "2px 0 8px" }}>Aucune pièce. Glissez un fichier ici, collez une image, ou ajoutez-en une.</p>}
         <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
           {carte.pieces.map((p) => {
-            const isImage = p.type.startsWith("image/") && p.data_url;
+            const isImage = p.type.startsWith("image/") && !!p.data_url;
             const isCover = carte.couverture_id === p.id;
             return (
               <div key={p.id} style={{ display: "flex", flexDirection: "column", gap: 4, maxWidth: 170 }}>
                 {isImage ? (
-                  <a href={p.data_url ?? "#"} target="_blank" rel="noopener noreferrer">
+                  <button type="button" onClick={() => setApercu(p)} title="Aperçu"
+                    style={{ padding: 0, border: "none", background: "transparent", cursor: "pointer" }}>
                     <img src={p.data_url ?? ""} alt={p.nom}
                       style={{ maxWidth: 160, maxHeight: 110, borderRadius: 8, objectFit: "cover", border: isCover ? "2px solid var(--accent, #0EA5E9)" : "1px solid var(--border, #d8dee9)" }} />
-                  </a>
+                  </button>
                 ) : (
-                  <a href={p.data_url ?? "#"} download={p.nom} className="btn btn-ghost btn-inline" style={{ fontSize: 13, wordBreak: "break-all" }}>{p.nom}</a>
+                  <button type="button" onClick={() => setApercu(p)} className="btn btn-ghost btn-inline"
+                    title="Aperçu" style={{ fontSize: 13, wordBreak: "break-all", textAlign: "left" }}>{p.nom}</button>
                 )}
-                {peutEditer && (
-                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                    {isImage && (
-                      <button type="button" className="btn btn-ghost btn-inline" style={{ fontSize: 11 }} disabled={busy}
-                        onClick={() => void couvrir(isCover ? null : p.id)}>
-                        {isCover ? "Retirer couverture" : "Couverture"}
-                      </button>
-                    )}
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  <button type="button" className="btn btn-ghost btn-inline" style={{ fontSize: 11 }}
+                    onClick={() => setApercu(p)}>Aperçu</button>
+                  <a href={downloadUrl(p)} download={p.nom} className="btn btn-ghost btn-inline" style={{ fontSize: 11 }}>Télécharger</a>
+                  {peutEditer && isImage && (
+                    <button type="button" className="btn btn-ghost btn-inline" style={{ fontSize: 11 }} disabled={busy}
+                      onClick={() => void couvrir(isCover ? null : p.id)}>
+                      {isCover ? "Retirer couverture" : "Couverture"}
+                    </button>
+                  )}
+                  {peutEditer && (
                     <button type="button" className="btn btn-ghost btn-inline" style={{ fontSize: 11 }} disabled={busy}
                       onClick={() => void retirer(p.id)}>Retirer</button>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             );
           })}
@@ -140,6 +147,7 @@ export function PiecesCarte({ carte, peutEditer, onChanged }: Props): JSX.Elemen
         )}
         {err && <p className="small" style={{ color: "var(--danger, #c0392b)", margin: "6px 0 0" }}>{err}</p>}
       </div>
+      {apercu && <ApercuPiece piece={apercu} onClose={() => setApercu(null)} />}
     </div>
   );
 }

@@ -1,13 +1,20 @@
 import { useEffect, useState } from "react";
 
 import {
+  type CibleActiviteRef,
   type Cibles,
   type EvenementDetail,
   type EvenementPayload,
+  type TypeEvenementRef,
+  ajouterPieceActivite,
   creerActivite,
   listCibles,
+  listCiblesActivite,
+  listTypesEvenements,
   modifierActivite,
 } from "../../lib/store.js";
+import { PiecesACharger } from "./PiecesACharger.js";
+import { lireFichier } from "./PiecesEvenement.js";
 import { detectPlatform } from "../../lib/platform.js";
 import { FUSEAUX } from "../../lib/fuseaux.js";
 import { utcToZoned, zonedToUtc } from "../../lib/tz.js";
@@ -19,17 +26,9 @@ import { RichEditor } from "../common/RichEditor.js";
 // single-column and scrollable for real usability. Reaches the same shared engine.
 // Times are typed in the activity's own zone and converted to UTC like the BO.
 
-const CIBLE_LABELS: Record<string, string> = {
-  general: "Toute la communauté (général)",
-  coordination: "Coordination",
-  commission: "Commission / Mission",
-  intendance: "Intendance",
-  tribu: "Tribu",
-  bergers: "Les Bergers",
-  responsables: "Les responsables (avec fonction)",
-  liste: "Liste d'adresses e-mail (groupe ad hoc)",
-};
-const CIBLE_UNITES = ["coordination", "commission", "intendance", "tribu"];
+// The destination list comes from the administrable referential
+// (GET /reference/cibles-activite), shared with the back office: no hardcoded
+// destination here, a new destination needs no code change in this form either.
 
 function Champ({ label, aide, children, full }: { label: string; aide?: string; children: JSX.Element; full?: boolean }): JSX.Element {
   return (
@@ -55,6 +54,8 @@ export function ActiviteFormComplet({ detail, onDone, onCancel }: Props): JSX.El
   const [fin, setFin] = useState(detail?.fin ? utcToZoned(detail.fin, zone0) : "");
   const [lieu, setLieu] = useState(detail?.lieu ?? "");
   const [type, setType] = useState(detail?.type ?? "rassemblement");
+  const [typeEvenementId, setTypeEvenementId] = useState<string | null>(detail?.type_evenement_id ?? null);
+  const [typesEvenements, setTypesEvenements] = useState<TypeEvenementRef[]>([]);
   const [mode, setMode] = useState(detail?.mode ?? "presentiel");
   const [diffusion, setDiffusion] = useState(detail?.type_diffusion ?? "aucun");
   const [visibilite, setVisibilite] = useState(detail?.visibilite ?? "membres");
@@ -77,7 +78,9 @@ export function ActiviteFormComplet({ detail, onDone, onCancel }: Props): JSX.El
     detail?.intervenants && detail.intervenants.length > 0 ? detail.intervenants : [""],
   );
   const [description, setDescription] = useState(detail?.description ?? "");
+  const [piecesAJoindre, setPiecesAJoindre] = useState<File[]>([]);
   const [cibles, setCibles] = useState<Cibles | null>(null);
+  const [destinations, setDestinations] = useState<CibleActiviteRef[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -86,27 +89,35 @@ export function ActiviteFormComplet({ detail, onDone, onCancel }: Props): JSX.El
 
   useEffect(() => {
     void listCibles().then(setCibles).catch(() => setCibles(null));
+    void listCiblesActivite().then(setDestinations).catch(() => setDestinations([]));
+    void listTypesEvenements().then(setTypesEvenements).catch(() => setTypesEvenements([]));
   }, []);
 
+  const typeCouleur = typesEvenements.find((te) => te.id === typeEvenementId)?.couleur ?? null;
+
+  const cibleCourante = destinations.find((c) => c.code === cibleType);
+  const besoinUnite = cibleCourante?.besoin_unite ?? false;
+  const estListe = cibleCourante?.type_regle === "liste";
+  const uniteTable = cibleCourante?.parametres.table ?? "";
   const options: { id: string; nom: string }[] =
-    cibleType === "coordination" ? (cibles?.coordinations ?? [])
-      : cibleType === "commission" ? (cibles?.commissions ?? [])
-        : cibleType === "intendance" ? (cibles?.intendances ?? [])
-          : cibleType === "tribu" ? (cibles?.tribus ?? []) : [];
+    uniteTable === "coordination" ? (cibles?.coordinations ?? [])
+      : uniteTable === "commission" ? (cibles?.commissions ?? [])
+        : uniteTable === "intendance" ? (cibles?.intendances ?? [])
+          : uniteTable === "tribu" ? (cibles?.tribus ?? []) : [];
 
   async function save(): Promise<void> {
     if (!titre.trim() || !debut) {
       setError("Le titre et la date de début sont obligatoires.");
       return;
     }
-    if (CIBLE_UNITES.includes(cibleType) && !cibleId) {
+    if (besoinUnite && !cibleId) {
       setError("Choisissez l'unité ciblée ou repassez sur « général ».");
       return;
     }
-    const emails = cibleType === "liste"
+    const emails = estListe
       ? emailsTexte.split(/[\n,;]+/).map((x) => x.trim().toLowerCase()).filter(Boolean)
       : [];
-    if (cibleType === "liste" && emails.length === 0) {
+    if (estListe && emails.length === 0) {
       setError("Ajoutez au moins une adresse e-mail pour un ciblage par liste.");
       return;
     }
@@ -117,11 +128,12 @@ export function ActiviteFormComplet({ detail, onDone, onCancel }: Props): JSX.El
       volet,
       debut: debutIso,
       type,
+      type_evenement_id: typeEvenementId,
       mode,
       type_diffusion: diffusion as EvenementPayload["type_diffusion"],
       visibilite: visibilite as EvenementPayload["visibilite"],
       cible_type: cibleType as EvenementPayload["cible_type"],
-      cible_id: CIBLE_UNITES.includes(cibleType) ? cibleId : null,
+      cible_id: besoinUnite ? cibleId : null,
       cible_genre: (cibleGenre || null) as EvenementPayload["cible_genre"],
       cible_age_min: ageMin ? Number(ageMin) : null,
       cible_age_max: ageMax ? Number(ageMax) : null,
@@ -158,7 +170,14 @@ export function ActiviteFormComplet({ detail, onDone, onCancel }: Props): JSX.El
       if (estEdition && detail) {
         await modifierActivite(detail.id, payload, estSerie && toucherSerie ? "toute_la_serie" : undefined);
       } else {
-        await creerActivite(payload);
+        const cree = await creerActivite(payload);
+        // Upload the attachments joined during planning to the freshly created activity.
+        for (const f of piecesAJoindre) {
+          try {
+            const dataUrl = await lireFichier(f);
+            await ajouterPieceActivite(cree.id, { nom: f.name || `piece-${Date.now()}`, type: f.type, taille: f.size, data_url: dataUrl });
+          } catch { /* a failed attachment must not lose the created activity */ }
+        }
       }
       onDone();
     } catch (err) {
@@ -208,8 +227,17 @@ export function ActiviteFormComplet({ detail, onDone, onCancel }: Props): JSX.El
         <Champ label="Volet">
           <select value={volet} onChange={(e) => setVolet(e.target.value)}><option value="A">A (membres)</option><option value="B">B (grand public)</option></select>
         </Champ>
-        <Champ label="Type">
+        <Champ label="Nature">
           <select value={type} onChange={(e) => setType(e.target.value)}><option value="rassemblement">Rassemblement</option><option value="formation">Formation</option><option value="priere">Prière</option></select>
+        </Champ>
+        <Champ label="Type d'événement (couleur du calendrier)">
+          <span style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            {typeCouleur && <span aria-hidden style={{ width: 16, height: 16, borderRadius: 4, background: typeCouleur, border: "1px solid rgba(0,0,0,0.15)", flexShrink: 0 }} />}
+            <select style={{ flex: 1 }} value={typeEvenementId ?? ""} onChange={(e) => setTypeEvenementId(e.target.value || null)}>
+              <option value="">Aucun (couleur par défaut)</option>
+              {typesEvenements.map((te) => <option key={te.id} value={te.id}>{te.nom}</option>)}
+            </select>
+          </span>
         </Champ>
         <Champ label="Mode">
           <select value={mode} onChange={(e) => setMode(e.target.value)}><option value="presentiel">Présentiel</option><option value="en_ligne">En ligne</option><option value="hybride">Hybride</option></select>
@@ -217,12 +245,17 @@ export function ActiviteFormComplet({ detail, onDone, onCancel }: Props): JSX.El
       </section>
 
       <section style={grid}>
-        <Champ label="Destinataires (qui est concerné ?)" full>
+        <Champ label="Destinataires (qui est concerné ?)" aide={cibleCourante?.description ?? undefined} full>
           <select value={cibleType} onChange={(e) => { setCibleType(e.target.value); setCibleId(null); }}>
-            {Object.keys(CIBLE_LABELS).map((k) => <option key={k} value={k}>{CIBLE_LABELS[k]}</option>)}
+            {destinations.map((c) => <option key={c.code} value={c.code}>{c.libelle}</option>)}
+            {/* Historical event whose destination was deactivated since: keep it
+                selectable so editing never silently retargets the audience. */}
+            {cibleCourante == null && destinations.length > 0 && (
+              <option value={cibleType}>{cibleType} (destination désactivée)</option>
+            )}
           </select>
         </Champ>
-        {CIBLE_UNITES.includes(cibleType) && (
+        {besoinUnite && (
           <Champ label="Unité ciblée *">
             <select value={cibleId ?? ""} onChange={(e) => setCibleId(e.target.value || null)}>
               <option value="">Choisir...</option>
@@ -230,7 +263,7 @@ export function ActiviteFormComplet({ detail, onDone, onCancel }: Props): JSX.El
             </select>
           </Champ>
         )}
-        {cibleType === "liste" && (
+        {estListe && (
           <Champ label="Adresses e-mail * (une par ligne)" full>
             <textarea value={emailsTexte} onChange={(e) => setEmailsTexte(e.target.value)} rows={3} />
           </Champ>
@@ -292,6 +325,13 @@ export function ActiviteFormComplet({ detail, onDone, onCancel }: Props): JSX.El
         <span className="muted" style={{ fontSize: 12 }}>Rédigez le contenu de l'activité : paragraphes, titres, gras, listes, liens.</span>
         <RichEditor value={description} onChange={setDescription} disabled={busy} />
       </section>
+
+      {!estEdition && (
+        <section style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <span style={{ fontSize: 13, fontWeight: 600 }}>Pièces jointes (images, documents)</span>
+          <PiecesACharger files={piecesAJoindre} onChange={setPiecesAJoindre} />
+        </section>
+      )}
 
       {estSerie && (
         <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>

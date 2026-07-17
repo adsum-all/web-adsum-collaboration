@@ -10,14 +10,6 @@ export interface Session {
   email?: string;
 }
 
-// Registered by the app: called when any request returns 401, so the stale
-// session is purged and the user is sent back to the login screen instead of
-// staying on a dead, signed-out view.
-let onUnauthorized: (() => void) | null = null;
-export function setUnauthorizedHandler(fn: (() => void) | null): void {
-  onUnauthorized = fn;
-}
-
 export interface Tableau {
   id: string;
   nom: string;
@@ -68,25 +60,6 @@ export class ApiError extends Error {
   ) {
     super(message);
   }
-}
-
-async function req<T>(path: string, token: string, init: RequestInit, onError: string): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
-    ...init,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      ...(init.body ? { "Content-Type": "application/json" } : {}),
-      ...(init.headers ?? {}),
-    },
-  });
-  if (!res.ok) {
-    if (res.status === 401 && onUnauthorized) onUnauthorized();
-    const message =
-      res.status === 401 ? "Session expirée" : res.status === 403 ? "Accès refusé" : onError;
-    throw new ApiError(message, res.status);
-  }
-  if (res.status === 204) return undefined as T;
-  return (await res.json()) as T;
 }
 
 /** Stable per-device id kept in localStorage, sent as X-Device-Id so the server can
@@ -156,81 +129,9 @@ export async function getMesPermissions(token: string): Promise<string[]> {
   return data.permissions ?? [];
 }
 
-export function getTableaux(token: string): Promise<Tableau[]> {
-  return req<Tableau[]>("/api/v1/collaboration/tableaux", token, { method: "GET" }, "Tableaux indisponibles");
-}
-
-export function createTableau(token: string, nom: string, description?: string): Promise<TableauDetail> {
-  return req<TableauDetail>(
-    "/api/v1/collaboration/tableaux",
-    token,
-    { method: "POST", body: JSON.stringify({ nom, description }) },
-    "Creation impossible",
-  );
-}
-
-export function getTableau(token: string, id: string): Promise<TableauDetail> {
-  return req<TableauDetail>(`/api/v1/collaboration/tableaux/${id}`, token, { method: "GET" }, "Tableau indisponible");
-}
-
-export interface CarteInput {
-  tableau_id: string;
-  colonne_id: string;
-  titre: string;
-  description?: string;
-  type_activite?: string;
-  date_prevue?: string;
-  lieu?: string;
-}
-
-export function createCarte(token: string, input: CarteInput): Promise<Carte> {
-  return req<Carte>(
-    "/api/v1/collaboration/cartes",
-    token,
-    { method: "POST", body: JSON.stringify(input) },
-    "Carte non creee",
-  );
-}
-
-export function updateCarte(
-  token: string,
-  id: string,
-  patch: Partial<Pick<Carte, "colonne_id" | "titre" | "description" | "type_activite" | "date_prevue" | "lieu" | "position">>,
-): Promise<Carte> {
-  return req<Carte>(
-    `/api/v1/collaboration/cartes/${id}`,
-    token,
-    { method: "PATCH", body: JSON.stringify(patch) },
-    "Mise a jour impossible",
-  );
-}
-
-export function getCommentaires(token: string, carteId: string): Promise<Commentaire[]> {
-  return req<Commentaire[]>(
-    `/api/v1/collaboration/cartes/${carteId}/commentaires`,
-    token,
-    { method: "GET" },
-    "Commentaires indisponibles",
-  );
-}
-
-export function addCommentaire(token: string, carteId: string, corps: string): Promise<Commentaire> {
-  return req<Commentaire>(
-    `/api/v1/collaboration/cartes/${carteId}/commentaires`,
-    token,
-    { method: "POST", body: JSON.stringify({ corps }) },
-    "Envoi impossible",
-  );
-}
-
-export function publierCarte(token: string, carteId: string): Promise<Carte> {
-  return req<Carte>(
-    `/api/v1/collaboration/cartes/${carteId}/publier`,
-    token,
-    { method: "POST" },
-    "Publication impossible",
-  );
-}
+// The legacy board/card endpoints (/api/v1/collaboration/tableaux and /cartes)
+// were removed: they bypassed per-space membership and leaked cards across spaces.
+// The space-scoped flow (lib/store + /espaces/... endpoints) is the only path now.
 
 export function apiBaseUrl(): string {
   return BASE;

@@ -10,6 +10,7 @@ import {
   listColonnes,
   listMembres,
   moveCarte,
+  peutEcrireCollaboration,
   reordonnerColonnes,
   toggleArchiveCarte,
   updateColonne,
@@ -19,6 +20,7 @@ import { peut, roleDansEspace } from "../../lib/permissions.js";
 import type { CarteProto, ColonneProto, Espace, Membre, TableauProto } from "../../lib/types.js";
 import { CarteModalProto } from "./CarteModalProto.js";
 import { CarteVue, echeanceLate, formatDate, libellePriorite } from "./CarteVue.js";
+import { ParticipantsTableau } from "./ParticipantsTableau.js";
 
 type Vue = "kanban" | "liste";
 
@@ -56,9 +58,12 @@ export function TableauPage({ espace, moiId, tableauId, carteInitiale = null, on
 
 
   const role = roleDansEspace(espace, moiId);
-  const peutGererCol = peut(espace, role, "gerer_colonnes");
-  const peutCreerCarte = peut(espace, role, "creer_carte");
-  const peutDeplacer = peut(espace, role, "deplacer_carte");
+  // Space role AND the platform write permission: the server requires both, so the
+  // UI must too, otherwise a superviser-only account sees buttons that 403.
+  const ecritCollab = peutEcrireCollaboration();
+  const peutGererCol = ecritCollab && peut(espace, role, "gerer_colonnes");
+  const peutCreerCarte = ecritCollab && peut(espace, role, "creer_carte");
+  const peutDeplacer = ecritCollab && peut(espace, role, "deplacer_carte");
 
   const cartesFiltrees = useMemo(() => {
     const q = fRecherche.trim().toLowerCase();
@@ -113,6 +118,13 @@ export function TableauPage({ espace, moiId, tableauId, carteInitiale = null, on
   useEffect(() => {
     void reload();
     void listMembres().then(setMembres);
+  }, [reload]);
+
+  // Near real-time board: refresh every 5 s so cards moved or added by others
+  // appear without a manual reload. The stale-response guard above keeps it safe.
+  useEffect(() => {
+    const id = window.setInterval(() => { void reload(); }, 5000);
+    return () => window.clearInterval(id);
   }, [reload]);
 
   // Near-real-time collaboration without a websocket stack: refetch when the tab
@@ -222,22 +234,30 @@ export function TableauPage({ espace, moiId, tableauId, carteInitiale = null, on
           <button type="button" className="btn btn-ghost btn-inline" onClick={() => setShowArchives((v) => !v)}>
             Archives ({cartesArchivees.length})
           </button>
-          <button
-            type="button"
-            className="btn btn-ghost btn-inline"
-            onClick={async () => {
-              await updateTableauProto(tableauId, { favori: !tableau.favori });
-              await reload();
-              onChanged();
-            }}
-            aria-pressed={tableau.favori}
-          >
-            {tableau.favori ? "Retirer des favoris" : "Ajouter aux favoris"}
-          </button>
+          {ecritCollab && (
+            <button
+              type="button"
+              className="btn btn-ghost btn-inline"
+              onClick={async () => {
+                await updateTableauProto(tableauId, { favori: !tableau.favori });
+                await reload();
+                onChanged();
+              }}
+              aria-pressed={tableau.favori}
+            >
+              {tableau.favori ? "Retirer des favoris" : "Ajouter aux favoris"}
+            </button>
+          )}
           <span className="badge badge-mut">
             {tableau.visibilite === "prive" ? "Privé" : "Visible espace"}
           </span>
-
+          {tableau.visibilite === "prive" && (
+            <ParticipantsTableau
+              espace={espace}
+              tableauId={tableauId}
+              peutGerer={ecritCollab && (role === "proprietaire" || role === "admin" || role === "membre")}
+            />
+          )}
         </div>
       </header>
 
@@ -265,8 +285,8 @@ export function TableauPage({ espace, moiId, tableauId, carteInitiale = null, on
         <select value={fAssigne} onChange={(e) => setFAssigne(e.target.value)} aria-label="Assigné">
           <option value="">Tous membres</option>
           {espace.membres.map((mm) => {
-            const m = membres.find((x) => x.id === mm.membre_id);
-            return <option key={mm.membre_id} value={mm.membre_id}>{m?.nom ?? mm.membre_id}</option>;
+            const nom = mm.nom || membres.find((x) => x.id === mm.membre_id)?.nom || mm.membre_id;
+            return <option key={mm.membre_id} value={mm.membre_id}>{nom}</option>;
           })}
         </select>
         <label className="switch-row" style={{ margin: 0 }}>
@@ -300,9 +320,11 @@ export function TableauPage({ espace, moiId, tableauId, carteInitiale = null, on
                     #{c.numero} {c.titre}
                   </button>
                   <span style={{ display: "flex", gap: 6 }}>
-                    <button type="button" className="btn btn-ghost btn-inline" onClick={async () => { await toggleArchiveCarte(c.id, false); await reload(); }}>
-                      Restaurer
-                    </button>
+                    {ecritCollab && (
+                      <button type="button" className="btn btn-ghost btn-inline" onClick={async () => { await toggleArchiveCarte(c.id, false); await reload(); }}>
+                        Restaurer
+                      </button>
+                    )}
                   </span>
                 </li>
               ))}
@@ -333,6 +355,7 @@ export function TableauPage({ espace, moiId, tableauId, carteInitiale = null, on
               colonne={col}
               cartes={cartesCol}
               membres={membres}
+              ecritCollab={ecritCollab}
               peutGererCol={peutGererCol}
               peutCreerCarte={peutCreerCarte}
               peutDeplacer={peutDeplacer}
@@ -414,6 +437,7 @@ interface ColonneVueProps {
   colonne: ColonneProto;
   cartes: CarteProto[];
   membres: Membre[];
+  ecritCollab: boolean;
   peutGererCol: boolean;
   peutCreerCarte: boolean;
   peutDeplacer: boolean;
@@ -442,6 +466,7 @@ function ColonneVue({
   colonne,
   cartes,
   membres,
+  ecritCollab,
   peutGererCol,
   peutCreerCarte,
   peutDeplacer,
@@ -532,9 +557,11 @@ function ColonneVue({
           <span className={`kanban-count${wipDepasse ? " kanban-count-over" : ""}`} title={colonne.wip !== null ? `WIP max ${colonne.wip}` : undefined}>
             {cartes.length}{colonne.wip !== null && `/${colonne.wip}`}
           </span>
-          <button type="button" className="col-more" aria-label={colonne.repliee ? "Déplier" : "Replier"} onClick={() => void onUpdate({ repliee: !colonne.repliee })}>
-            {colonne.repliee ? "▸" : "▾"}
-          </button>
+          {ecritCollab && (
+            <button type="button" className="col-more" aria-label={colonne.repliee ? "Déplier" : "Replier"} onClick={() => void onUpdate({ repliee: !colonne.repliee })}>
+              {colonne.repliee ? "▸" : "▾"}
+            </button>
+          )}
           {peutGererCol && (
             <>
               <button type="button" className="col-more" aria-label="Options" onClick={() => setMenuOpen((v) => !v)}>⋯</button>
