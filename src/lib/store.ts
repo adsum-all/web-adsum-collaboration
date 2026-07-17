@@ -22,9 +22,15 @@ const B = "/api/v1/collaboration";
 // effect, never on every render).
 export function initStore(session: Session): Promise<Membre | null> {
   setToken(session.token);
-  void chargerPermissions();
+  // Load the platform permissions and the member in parallel, but only surface the
+  // member (which triggers the first render) once the permissions are known. Otherwise
+  // the write-permission gates (peutEcrireCollaboration) evaluate against a null cache
+  // on the first paint and hide every write control until a later tick, even for a
+  // super_admin. chargerPermissions never rejects (it fails closed to an empty set).
+  const permissionsPrete = chargerPermissions();
   return resolveMe(session)
-    .then((m) => {
+    .then(async (m) => {
+      await permissionsPrete;
       setMe(m);
       return m;
     })
@@ -308,6 +314,15 @@ export async function chargerPermissions(): Promise<void> {
   }
 }
 export function peutGererActivites(): boolean {
+  return (_permissions ?? []).includes("collaboration.gerer");
+}
+
+// Any collaboration write (create/edit a board, a card, a comment, a checklist, a
+// piece) requires the platform permission collaboration.gerer on the server, ON TOP
+// of the space role. A space member holding only collaboration.superviser (e.g. the
+// direction role) must therefore see read-only surfaces: the UI gates every write
+// action with this so it never offers a button that the API will refuse with 403.
+export function peutEcrireCollaboration(): boolean {
   return (_permissions ?? []).includes("collaboration.gerer");
 }
 

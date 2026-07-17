@@ -10,6 +10,7 @@ import {
   listColonnes,
   listMembres,
   moveCarte,
+  peutEcrireCollaboration,
   reordonnerColonnes,
   toggleArchiveCarte,
   updateColonne,
@@ -57,9 +58,12 @@ export function TableauPage({ espace, moiId, tableauId, carteInitiale = null, on
 
 
   const role = roleDansEspace(espace, moiId);
-  const peutGererCol = peut(espace, role, "gerer_colonnes");
-  const peutCreerCarte = peut(espace, role, "creer_carte");
-  const peutDeplacer = peut(espace, role, "deplacer_carte");
+  // Space role AND the platform write permission: the server requires both, so the
+  // UI must too, otherwise a superviser-only account sees buttons that 403.
+  const ecritCollab = peutEcrireCollaboration();
+  const peutGererCol = ecritCollab && peut(espace, role, "gerer_colonnes");
+  const peutCreerCarte = ecritCollab && peut(espace, role, "creer_carte");
+  const peutDeplacer = ecritCollab && peut(espace, role, "deplacer_carte");
 
   const cartesFiltrees = useMemo(() => {
     const q = fRecherche.trim().toLowerCase();
@@ -230,18 +234,20 @@ export function TableauPage({ espace, moiId, tableauId, carteInitiale = null, on
           <button type="button" className="btn btn-ghost btn-inline" onClick={() => setShowArchives((v) => !v)}>
             Archives ({cartesArchivees.length})
           </button>
-          <button
-            type="button"
-            className="btn btn-ghost btn-inline"
-            onClick={async () => {
-              await updateTableauProto(tableauId, { favori: !tableau.favori });
-              await reload();
-              onChanged();
-            }}
-            aria-pressed={tableau.favori}
-          >
-            {tableau.favori ? "Retirer des favoris" : "Ajouter aux favoris"}
-          </button>
+          {ecritCollab && (
+            <button
+              type="button"
+              className="btn btn-ghost btn-inline"
+              onClick={async () => {
+                await updateTableauProto(tableauId, { favori: !tableau.favori });
+                await reload();
+                onChanged();
+              }}
+              aria-pressed={tableau.favori}
+            >
+              {tableau.favori ? "Retirer des favoris" : "Ajouter aux favoris"}
+            </button>
+          )}
           <span className="badge badge-mut">
             {tableau.visibilite === "prive" ? "Privé" : "Visible espace"}
           </span>
@@ -249,7 +255,7 @@ export function TableauPage({ espace, moiId, tableauId, carteInitiale = null, on
             <ParticipantsTableau
               espace={espace}
               tableauId={tableauId}
-              peutGerer={role === "proprietaire" || role === "admin" || role === "membre"}
+              peutGerer={ecritCollab && (role === "proprietaire" || role === "admin" || role === "membre")}
             />
           )}
         </div>
@@ -314,9 +320,11 @@ export function TableauPage({ espace, moiId, tableauId, carteInitiale = null, on
                     #{c.numero} {c.titre}
                   </button>
                   <span style={{ display: "flex", gap: 6 }}>
-                    <button type="button" className="btn btn-ghost btn-inline" onClick={async () => { await toggleArchiveCarte(c.id, false); await reload(); }}>
-                      Restaurer
-                    </button>
+                    {ecritCollab && (
+                      <button type="button" className="btn btn-ghost btn-inline" onClick={async () => { await toggleArchiveCarte(c.id, false); await reload(); }}>
+                        Restaurer
+                      </button>
+                    )}
                   </span>
                 </li>
               ))}
@@ -347,6 +355,7 @@ export function TableauPage({ espace, moiId, tableauId, carteInitiale = null, on
               colonne={col}
               cartes={cartesCol}
               membres={membres}
+              ecritCollab={ecritCollab}
               peutGererCol={peutGererCol}
               peutCreerCarte={peutCreerCarte}
               peutDeplacer={peutDeplacer}
@@ -428,6 +437,7 @@ interface ColonneVueProps {
   colonne: ColonneProto;
   cartes: CarteProto[];
   membres: Membre[];
+  ecritCollab: boolean;
   peutGererCol: boolean;
   peutCreerCarte: boolean;
   peutDeplacer: boolean;
@@ -456,6 +466,7 @@ function ColonneVue({
   colonne,
   cartes,
   membres,
+  ecritCollab,
   peutGererCol,
   peutCreerCarte,
   peutDeplacer,
@@ -546,9 +557,11 @@ function ColonneVue({
           <span className={`kanban-count${wipDepasse ? " kanban-count-over" : ""}`} title={colonne.wip !== null ? `WIP max ${colonne.wip}` : undefined}>
             {cartes.length}{colonne.wip !== null && `/${colonne.wip}`}
           </span>
-          <button type="button" className="col-more" aria-label={colonne.repliee ? "Déplier" : "Replier"} onClick={() => void onUpdate({ repliee: !colonne.repliee })}>
-            {colonne.repliee ? "▸" : "▾"}
-          </button>
+          {ecritCollab && (
+            <button type="button" className="col-more" aria-label={colonne.repliee ? "Déplier" : "Replier"} onClick={() => void onUpdate({ repliee: !colonne.repliee })}>
+              {colonne.repliee ? "▸" : "▾"}
+            </button>
+          )}
           {peutGererCol && (
             <>
               <button type="button" className="col-more" aria-label="Options" onClick={() => setMenuOpen((v) => !v)}>⋯</button>

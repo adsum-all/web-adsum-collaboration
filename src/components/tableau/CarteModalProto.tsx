@@ -20,7 +20,7 @@ import {
   toggleArchiveCarte,
   updateCarteProto,
 } from "../../lib/store.js";
-import type { Presence } from "../../lib/store.js";
+import { type Presence, peutEcrireCollaboration } from "../../lib/store.js";
 import { peut, roleDansEspace } from "../../lib/permissions.js";
 import type { CarteProto, Espace, Membre, Priorite, TableauProto } from "../../lib/types.js";
 import { PiecesCarte } from "./PiecesCarte.js";
@@ -101,10 +101,15 @@ export function CarteModalProto({ carte, espace, membres, moiId, onClose, onChan
   }
 
   const role = roleDansEspace(espace, moiId);
-  const peutEditer = peut(espace, role, "editer_carte");
-  const peutCommenter = peut(espace, role, "commenter");
-  const peutArchiver = peut(espace, role, "archiver");
-  const peutPublier = peut(espace, role, "publier_evenement");
+  // Every card write (edit, comment, archive, publish, pieces, checklists) requires
+  // the platform permission collaboration.gerer on the server, ON TOP of the space
+  // role. Gate the UI with both so a superviser-only account gets a read-only card
+  // instead of buttons that the API refuses with 403.
+  const ecritCollab = peutEcrireCollaboration();
+  const peutEditer = ecritCollab && peut(espace, role, "editer_carte");
+  const peutCommenter = ecritCollab && peut(espace, role, "commenter");
+  const peutArchiver = ecritCollab && peut(espace, role, "archiver");
+  const peutPublier = ecritCollab && peut(espace, role, "publier_evenement");
   // Assignee picker source: every member of the space, with their display name and
   // initials carried by the space payload. We no longer intersect with the staff-only
   // directory ("membres"), which hid non-staff space members from the picker.

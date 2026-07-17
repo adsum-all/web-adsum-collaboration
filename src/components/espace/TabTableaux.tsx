@@ -4,6 +4,7 @@ import {
   createTableauDepuisModele,
   listModelesCatalogue,
   listTableauxEspace,
+  peutEcrireCollaboration,
   updateTableauProto,
   type ModeleCatalogue,
 } from "../../lib/store.js";
@@ -28,7 +29,10 @@ export function TabTableaux({ espace, moiId, onOuvrir }: Props): JSX.Element {
   const [catalogue, setCatalogue] = useState<ModeleCatalogue[]>([]);
 
   const role = roleDansEspace(espace, moiId);
-  const peutCreer = peut(espace, role, "creer_carte");
+  // Creating a board writes on the server (require collaboration.gerer), so the
+  // button needs the platform write permission AND the space role, not the role alone.
+  const ecritCollab = peutEcrireCollaboration();
+  const peutCreer = ecritCollab && peut(espace, role, "creer_carte");
 
   async function reload(): Promise<void> {
     setLoading(true);
@@ -158,15 +162,17 @@ export function TabTableaux({ espace, moiId, onOuvrir }: Props): JSX.Element {
                     </span>
                   </span>
                 </button>
-                <button
-                  type="button"
-                  className="tile-fav"
-                  aria-pressed={t.favori}
-                  aria-label={t.favori ? "Retirer des favoris" : "Ajouter aux favoris"}
-                  onClick={() => void toggleFavori(t)}
-                >
-                  {t.favori ? "★" : "☆"}
-                </button>
+                {ecritCollab && (
+                  <button
+                    type="button"
+                    className="tile-fav"
+                    aria-pressed={t.favori}
+                    aria-label={t.favori ? "Retirer des favoris" : "Ajouter aux favoris"}
+                    onClick={() => void toggleFavori(t)}
+                  >
+                    {t.favori ? "★" : "☆"}
+                  </button>
+                )}
               </div>
             ))}
         </div>

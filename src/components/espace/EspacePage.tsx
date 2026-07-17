@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import { createEspace, listMembres } from "../../lib/store.js";
+import { createEspace, listMembres, peutEcrireCollaboration } from "../../lib/store.js";
 import { libelleRole, peut, roleDansEspace } from "../../lib/permissions.js";
 import type { Espace, Membre, RoleEspace } from "../../lib/types.js";
 import { EmptyState } from "../common/EmptyState.js";
@@ -37,6 +37,9 @@ export function EspacePage({ espace, parent, moiId, onChanged, onOuvrirEspace, o
 
   const roleReel = roleDansEspace(espace, moiId);
   const estGerant = roleReel === "proprietaire" || roleReel === "admin";
+  // Creating a sub-space is a server write (POST /collaboration/espaces requires
+  // collaboration.gerer): the space role alone is not enough, add the platform grant.
+  const peutCreerSous = estGerant && peutEcrireCollaboration();
   const estTopLevel = !espace.parent_id;
 
   async function creerSousEspace(): Promise<void> {
@@ -110,7 +113,7 @@ export function EspacePage({ espace, parent, moiId, onChanged, onOuvrirEspace, o
         <section className="collab-sousespaces" style={{ margin: "4px 0 16px" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 8 }}>
             <h2 className="card-title" style={{ margin: 0, fontSize: 15 }}>Sous-espaces</h2>
-            {estGerant && !creerSous && (
+            {peutCreerSous && !creerSous && (
               <button type="button" className="btn btn-ghost btn-inline" onClick={() => setCreerSous(true)}>+ Nouveau sous-espace</button>
             )}
           </div>
@@ -118,7 +121,7 @@ export function EspacePage({ espace, parent, moiId, onChanged, onOuvrirEspace, o
             Un sous-espace est un espace complet (tableaux, calendrier, membres, réglages), inclus dans celui-ci. Cliquez pour y entrer.
           </p>
 
-          {estGerant && creerSous && (
+          {peutCreerSous && creerSous && (
             <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
               <input
                 autoFocus
@@ -200,7 +203,6 @@ export function EspacePage({ espace, parent, moiId, onChanged, onOuvrirEspace, o
             espace={espace}
             membres={membres}
             moiId={moiId}
-            roleEffectif={roleEffectif}
             onChanged={onChanged}
           />
         )}

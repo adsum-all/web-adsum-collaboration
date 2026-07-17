@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import { createEspace, statsGlobales } from "../../lib/store.js";
+import { createEspace, peutEcrireCollaboration, statsGlobales } from "../../lib/store.js";
 import type { Espace, TypeEspace } from "../../lib/types.js";
 import { EmptyState } from "../common/EmptyState.js";
 
@@ -27,6 +27,9 @@ export function Home({ espaces, onOuvrir, onCree, currentNom }: HomeProps): JSX.
   const [type, setType] = useState<TypeEspace>("coordination");
   const [couleur, setCouleur] = useState("#2a4fad");
   const [stats, setStats] = useState<{ espaces: number; tableaux: number; cartes: number; enRetard: number; termineesSemaine: number } | null>(null);
+  // Creating a space writes on the server (POST /collaboration/espaces requires
+  // collaboration.gerer), so a supervise-only account must not see the button.
+  const peutCreerEspace = peutEcrireCollaboration();
 
   useEffect(() => { void statsGlobales().then(setStats); }, [espaces]);
 
@@ -48,7 +51,7 @@ export function Home({ espaces, onOuvrir, onCree, currentNom }: HomeProps): JSX.
           <h1>Bonjour, {currentNom}</h1>
           <p className="muted">Vos espaces de collaboration, vos échéances et l'activité récente.</p>
         </div>
-        {!creation && (
+        {!creation && peutCreerEspace && (
           <button type="button" className="btn btn-primary" onClick={() => setCreation(true)}>
             + Créer un espace
           </button>
@@ -67,7 +70,7 @@ export function Home({ espaces, onOuvrir, onCree, currentNom }: HomeProps): JSX.
 
 
 
-      {creation && (
+      {creation && peutCreerEspace && (
         <section className="card">
           <h2 className="card-title">Nouvel espace de travail</h2>
           <div className="form-grid">

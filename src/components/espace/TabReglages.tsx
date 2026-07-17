@@ -4,6 +4,7 @@ import {
   type PolitiqueSuppression,
   createEtiquette,
   deleteEtiquette,
+  peutEcrireCollaboration,
   supprimerEspace,
   updateEspace,
   updateEtiquette,
@@ -28,10 +29,13 @@ export function TabReglages({ espace, roleReel, viewAs, onViewAs, onChanged }: P
   const [newEtCouleur, setNewEtCouleur] = useState("#2a4fad");
   const [enregistrement, setEnregistrement] = useState<"" | "cours" | "ok" | "erreur">("");
   const [erreurMsg, setErreurMsg] = useState<string | null>(null);
-  const roleEffectif: RoleEspace | null = viewAs ?? roleReel;
-  const peutGererEt = peut(espace, roleEffectif, "gerer_etiquettes");
-  const peutModifier = peut(espace, roleEffectif, "gerer_membres");
-  const estProprio = roleReel === "proprietaire";
+  // Write gates use the REAL role, never viewAs (which only previews the header
+  // badge), and require the platform permission collaboration.gerer like the server,
+  // so a supervise-only account never sees a control the API would refuse with 403.
+  const peutEcrire = peutEcrireCollaboration();
+  const peutGererEt = peutEcrire && peut(espace, roleReel, "gerer_etiquettes");
+  const peutModifier = peutEcrire && peut(espace, roleReel, "gerer_membres");
+  const estProprio = roleReel === "proprietaire" && peutEcrire;
   const [suppr, setSuppr] = useState(false);
   const [supprBusy, setSupprBusy] = useState(false);
   const [supprErr, setSupprErr] = useState<string | null>(null);
@@ -111,7 +115,7 @@ export function TabReglages({ espace, roleReel, viewAs, onViewAs, onChanged }: P
           <input
             type="checkbox"
             checked={espace.observateurs_commentent}
-            disabled={!peut(espace, roleEffectif, "gerer_membres")}
+            disabled={!peutModifier}
             onChange={(e) => void updateEspace(espace.id, { observateurs_commentent: e.target.checked }).then(onChanged)}
           />
           <span>Autoriser les observateurs à commenter les cartes</span>
@@ -237,7 +241,7 @@ export function TabReglages({ espace, roleReel, viewAs, onViewAs, onChanged }: P
 
       <section className="card">
         <h2 className="card-title">Tableaux archivés</h2>
-        <ArchivesPanel espace={espace} onChanged={onChanged} />
+        <ArchivesPanel espace={espace} peutGerer={peutEcrire && peut(espace, roleReel, "archiver")} onChanged={onChanged} />
       </section>
 
       {estProprio && (
