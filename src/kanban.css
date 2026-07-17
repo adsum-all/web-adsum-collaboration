@@ -298,48 +298,360 @@
 }
 
 @media (max-width: 720px) {
+  .modal-backdrop {
+    padding: 6px;
+  }
+  .modal {
+    max-height: 96dvh;
+  }
   .modal-body {
     grid-template-columns: 1fr;
     overflow-y: auto;
-  }
-  /* Stack the detail fields so the card modal never scrolls horizontally. */
-  .modal-grid {
-    grid-template-columns: 1fr;
   }
   .modal-chat {
     border-left: none;
     border-top: 1px solid var(--adsum-line);
   }
+  .modal-grid {
+    grid-template-columns: 1fr;
+  }
+  .modal-head {
+    padding: 12px 14px;
+  }
+  .modal-form {
+    padding: 14px;
+  }
 }
 
-/* Mobile kanban: one column at a time with scroll-snap, the next one peeked, and
-   a sticky column header, so it is thumb-friendly on a phone instead of a raw
-   horizontal scroll. Design stays light (tokens only). */
-@media (max-width: 820px) {
-  .kanban {
-    scroll-snap-type: x mandatory;
-    scroll-padding-left: 12px;
-    -webkit-overflow-scrolling: touch;
-    gap: 12px;
-  }
-  .kanban-col {
-    flex: 0 0 86vw;
-    max-width: 86vw;
-    scroll-snap-align: start;
-    max-height: calc(100dvh - 170px);
-  }
-  .kanban-col-head {
-    position: sticky;
-    top: 0;
-    z-index: 1;
-    background: var(--adsum-board);
-    padding-top: 4px;
-    padding-bottom: 4px;
-  }
+/* Never let the card modal scroll horizontally: constrain every child to the
+   column width and keep popovers inside the viewport on small screens. */
+.modal-form {
+  min-width: 0;
+  overflow-x: hidden;
 }
-@media (max-width: 480px) {
-  .kanban-col {
-    flex-basis: 90vw;
-    max-width: 90vw;
-  }
+.modal-form > * {
+  min-width: 0;
+  max-width: 100%;
 }
+.modal-titre-input {
+  max-width: 100%;
+}
+.mention-pop {
+  max-width: 82vw;
+}
+.rich-read img,
+.modal-form img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Jalon 3+ : DnD, cartes riches, modale enrichie, tuiles favoris */
+
+.kanban-col-titre {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.kanban-col-titre:disabled { cursor: default; }
+.kanban-col-titre:hover:not(:disabled) { color: var(--adsum-acc); }
+.col-more {
+  background: none;
+  border: none;
+  color: var(--adsum-mut);
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.col-more:hover { background: var(--adsum-panel); color: var(--adsum-danger); }
+
+.kanban-col-add {
+  background: transparent;
+  border: 1px dashed var(--adsum-line);
+  min-height: 60px;
+  justify-content: center;
+  align-items: stretch;
+}
+
+.kanban-card-dragging { opacity: 0.4; }
+.kanban-card-etiq {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  padding: 8px 10px 0;
+}
+.et-pill {
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--adsum-radius-pill);
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+.et-pill-off {
+  background: transparent;
+  color: var(--adsum-mut);
+}
+.et-picker {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.kanban-card-meta {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.kanban-card-avatars {
+  display: flex;
+  gap: 3px;
+  margin-top: 6px;
+}
+.avatar-sm {
+  width: 22px;
+  height: 22px;
+  font-size: 10px;
+}
+
+.badge-prio {
+  color: #fff;
+  border: none;
+}
+/* Priority badge colours are defined once, further down (section "Priorités"). */
+
+.kanban-drop-zone {
+  height: 34px;
+  border-radius: var(--adsum-radius-md);
+  border: 1px dashed transparent;
+  display: grid;
+  place-items: center;
+  color: var(--adsum-faint);
+  font-size: var(--adsum-text-xs);
+}
+.kanban-drop-zone-over {
+  border-color: var(--adsum-acc);
+  background: rgba(42, 79, 173, 0.06);
+  color: var(--adsum-acc);
+}
+
+.modal-titre-input {
+  font-family: var(--adsum-font-display);
+  font-size: var(--adsum-text-lg);
+  font-weight: 700;
+  color: var(--adsum-ink);
+  background: transparent;
+  border: 1px solid transparent;
+  padding: 4px 6px;
+  border-radius: 6px;
+  width: 100%;
+  margin-top: 4px;
+}
+.modal-titre-input:hover, .modal-titre-input:focus {
+  border-color: var(--adsum-line);
+  background: var(--adsum-bg);
+  outline: none;
+}
+
+.modal-section-titre {
+  display: block;
+  font-size: var(--adsum-text-sm);
+  color: var(--adsum-mut);
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.membre-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px 4px 4px;
+  border-radius: var(--adsum-radius-pill);
+  background: var(--adsum-panel);
+  border: 1px solid var(--adsum-line);
+  color: var(--adsum-mut);
+  font-size: var(--adsum-text-xs);
+  cursor: pointer;
+  font-family: inherit;
+}
+.membre-chip-on {
+  background: var(--adsum-info-bg);
+  border-color: var(--adsum-acc);
+  color: var(--adsum-acc);
+}
+
+.checklist {
+  border: 1px solid var(--adsum-line);
+  border-radius: var(--adsum-radius-md);
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  background: var(--adsum-panel);
+}
+.checklist-head {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.checklist ul { list-style: none; padding: 0; margin: 0 0 6px; display: flex; flex-direction: column; gap: 4px; }
+.checklist-fait { text-decoration: line-through; color: var(--adsum-faint); }
+
+.chat-activity {
+  padding: 2px 4px;
+}
+
+.tab-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.board-tile-wrap { position: relative; }
+.tile-fav {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: transparent;
+  border: none;
+  color: #d4a017;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 4px;
+}
+.tile-fav:hover { background: var(--adsum-panel); }
+
+.espace-avatar-sm {
+  width: 22px;
+  height: 22px;
+  font-size: 12px;
+  border-radius: 6px;
+  display: inline-grid;
+  place-items: center;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+.nav-item-add {
+  color: var(--sidebar-mut);
+  font-style: italic;
+}
+.nav-initiale-add {
+  background: transparent !important;
+  border: 1px dashed var(--sidebar-mut);
+  color: var(--sidebar-mut);
+}
+
+.textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 80px;
+}
+
+/* Checklist alignement Trello-like: case et texte sur la même ligne */
+.checklist ul li { display: block; }
+.checklist ul li .switch-row { display: flex; flex-direction: row; align-items: center; gap: 10px; padding: 4px 0; }
+.checklist ul li .switch-row input[type="checkbox"] { flex: 0 0 auto; width: 16px; height: 16px; margin: 0; }
+.checklist ul li .switch-row span { flex: 1; }
+
+/* Filtres kanban */
+.filtres-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; padding: 10px 12px; background: var(--adsum-panel); border: 1px solid var(--adsum-line); border-radius: var(--adsum-radius-md); }
+.filtres-bar select, .filtres-bar .search { padding: 6px 10px; border: 1px solid var(--adsum-line); border-radius: 6px; background: var(--adsum-bg); color: var(--adsum-ink); font: inherit; }
+.filtres-bar .search { min-width: 240px; flex: 1; }
+
+/* Search topbar button */
+.search-global-btn { display: inline-flex; align-items: center; gap: 8px; background: var(--adsum-panel); border: 1px solid var(--adsum-line); border-radius: 8px; padding: 6px 12px; cursor: pointer; color: var(--adsum-mut); font: inherit; }
+.search-global-btn:hover { border-color: var(--adsum-acc); color: var(--adsum-ink); }
+.search-placeholder { flex: 1; text-align: left; }
+.kbd { display: inline-block; padding: 2px 6px; border: 1px solid var(--adsum-line); border-bottom-width: 2px; border-radius: 4px; font: 11px/1 ui-monospace, monospace; color: var(--adsum-mut); background: var(--adsum-bg); }
+.kbd-sm { font-size: 10px; padding: 1px 5px; }
+
+/* Global search modal */
+.modal-search { max-width: 640px; padding: 0; overflow: hidden; }
+.search-head { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--adsum-line); }
+.search-head input { flex: 1; border: none; outline: none; background: transparent; font-size: 16px; color: var(--adsum-ink); }
+.search-results { max-height: 60vh; overflow-y: auto; padding: 8px 0; }
+.search-group { padding: 6px 0; }
+.search-group-title { padding: 6px 16px; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--adsum-faint); }
+.search-item { display: flex; flex-direction: column; gap: 2px; width: 100%; text-align: left; padding: 8px 16px; background: transparent; border: none; cursor: pointer; color: var(--adsum-ink); font: inherit; }
+.search-item-active, .search-item:hover { background: var(--adsum-board); }
+.search-item-titre { font-weight: 500; }
+.search-item-sub { font-size: 12px; color: var(--adsum-mut); }
+
+/* Kanban colonne enrichies */
+.kanban-col { position: relative; }
+.kanban-col-bar { position: absolute; top: 0; left: 0; right: 0; height: 3px; border-top-left-radius: var(--adsum-radius-lg); border-top-right-radius: var(--adsum-radius-lg); }
+.kanban-col-repliee .kanban-col-head { border-bottom: none; }
+.kanban-col-wip-over { outline: 2px solid #c0392b40; }
+.kanban-count-over { color: #c0392b; font-weight: 700; }
+.col-menu { padding: 10px 12px; border-top: 1px solid var(--adsum-line); display: flex; flex-direction: column; gap: 8px; }
+.col-menu-row { display: flex; align-items: center; gap: 8px; justify-content: space-between; }
+.swatch { width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--adsum-line); cursor: pointer; }
+.swatch-on { outline: 2px solid var(--adsum-acc); outline-offset: 2px; }
+
+/* Reactions & mentions */
+.chat-reactions { display: flex; gap: 4px; margin-top: 4px; }
+.react-btn { border: 1px solid var(--adsum-line); background: var(--adsum-panel); border-radius: 12px; padding: 2px 8px; font-size: 12px; cursor: pointer; }
+.react-btn-on { background: var(--adsum-acc); color: #fff; border-color: var(--adsum-acc); }
+.mention-pop { position: absolute; bottom: 100%; left: 0; right: 60px; background: var(--adsum-panel); border: 1px solid var(--adsum-line); border-radius: 8px; box-shadow: var(--adsum-shadow-sm); max-height: 200px; overflow-y: auto; z-index: 10; }
+.mention-item { display: flex; align-items: center; gap: 8px; padding: 6px 10px; width: 100%; background: transparent; border: none; text-align: left; cursor: pointer; font: inherit; }
+.mention-item:hover { background: var(--adsum-board); }
+/* Portal popover (checklist item picker and "..." menu): fixed-position layer,
+   never clipped by the modal overflow or painted behind following content. */
+.popover-layer { background: var(--adsum-panel); border: 1px solid var(--adsum-line); border-radius: 10px; box-shadow: var(--adsum-shadow-md, 0 12px 32px rgba(15, 23, 42, 0.18)); overflow-y: auto; padding: 4px; max-width: 92vw; z-index: 3000; }
+.popover-layer .mention-item { border-radius: 6px; }
+
+/* Board template picker (premium models). */
+.modele-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; margin-top: 8px; }
+.modele-carte { text-align: left; background: var(--adsum-panel); border: 1px solid var(--adsum-line); border-radius: 12px; padding: 12px; cursor: pointer; font: inherit; color: inherit; display: flex; flex-direction: column; gap: 6px; }
+.modele-carte:hover { border-color: var(--adsum-acc); }
+.modele-carte-on { border-color: var(--adsum-acc); box-shadow: 0 0 0 2px color-mix(in srgb, var(--adsum-acc) 30%, transparent); }
+.modele-libelle { font-weight: 600; }
+.modele-desc { color: var(--adsum-mut); font-size: 12px; }
+.modele-colonnes { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
+.modele-col { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; background: var(--adsum-board); border: 1px solid var(--adsum-line); border-radius: 999px; padding: 2px 7px; }
+.modele-col-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+/* Attachment preview overlay (image, PDF, text in-app; open/download for the rest). */
+.apercu-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.62); display: flex; align-items: center; justify-content: center; padding: 24px; z-index: 4000; }
+.apercu-box { background: var(--adsum-panel); border: 1px solid var(--adsum-line); border-radius: 12px; box-shadow: var(--adsum-shadow-md, 0 18px 48px rgba(15, 23, 42, 0.35)); width: min(1000px, 96vw); height: min(88vh, 900px); display: flex; flex-direction: column; overflow: hidden; }
+.apercu-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border-bottom: 1px solid var(--adsum-line); }
+.apercu-nom { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.apercu-body { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; background: var(--adsum-board); overflow: auto; }
+.apercu-image { max-width: 100%; max-height: 100%; object-fit: contain; }
+.apercu-frame { width: 100%; height: 100%; border: none; background: #fff; }
+.apercu-none { text-align: center; padding: 32px; max-width: 460px; }
+
+/* Progress bar checklist */
+.progress { height: 6px; background: var(--adsum-line); border-radius: 3px; overflow: hidden; margin: 4px 0 8px; }
+.progress-bar { height: 100%; background: var(--adsum-acc); transition: width 0.3s; }
+
+/* Tabs mini */
+.tabs-mini { gap: 2px; padding: 2px; background: var(--adsum-board); border-radius: 8px; }
+.tabs-mini .tab { padding: 4px 10px; font-size: 12px; }
+
+/* Liste view */
+.liste-vue { padding-top: 8px; }
+.table-cartes { width: 100%; border-collapse: collapse; background: var(--adsum-panel); border: 1px solid var(--adsum-line); border-radius: var(--adsum-radius-lg); overflow: hidden; }
+.table-cartes th, .table-cartes td { padding: 8px 12px; border-bottom: 1px solid var(--adsum-line); text-align: left; font-size: 13px; }
+.table-cartes th { background: var(--adsum-board); font-weight: 600; color: var(--adsum-mut); }
+.table-cartes-row { cursor: pointer; }
+.table-cartes-row:hover { background: var(--adsum-board); }
+.liste-cartes { list-style: none; padding: 0; margin: 8px 0 0; }
+.liste-carte { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; border-bottom: 1px solid var(--adsum-line); }
+.liste-carte-titre { background: transparent; border: none; text-align: left; cursor: pointer; color: var(--adsum-ink); font: inherit; }
+.liste-carte-titre:hover { color: var(--adsum-acc); }
+
+/* Priorités */
+.badge-prio-urgente { background: #c0392b; color: #fff; }
+.badge-prio-haute { background: #f59e0b; color: #fff; }
+.badge-prio-normale { background: var(--adsum-line); color: var(--adsum-mut); }
+.badge-prio-basse { background: transparent; border: 1px solid var(--adsum-line); color: var(--adsum-mut); }

@@ -1,6 +1,17 @@
 # Minimal pipeline for ADSUM. Delegates to the shared CI templates in
-# sr-media-ai/adsum/deployment/ci-templates (Constitution audit and stack jobs).
+# sr-media-ai/adsum/deployment/ci-templates (Constitution audit, stack jobs and
+# continuous deployment to Cloudflare Pages on develop).
+# Continuous deployment activates once these protected CI/CD variables are set:
+#   CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, CF_PAGES_PROJECT (= adsum-collaboration)
+stages:
+  - quality
+  - test
+  - build
+  - deploy
+
 include:
   - project: 'sr-media-ai/adsum/deployment/ci-templates'
     ref: main
-    file: '/templates/node.yml'
+    file:
+      - '/templates/node.yml'
+      - '/templates/deploy-web.yml'

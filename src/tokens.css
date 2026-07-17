@@ -1,0 +1,118 @@
+:root {
+  --adsum-brand-50: #eef3fc;
+  --adsum-brand-100: #d9e4f8;
+  --adsum-brand-200: #b4c8f0;
+  --adsum-brand-300: #8aa8e6;
+  --adsum-brand-400: #5b82d8;
+  --adsum-brand-500: #3563c9;
+  --adsum-brand-600: #2a4fad;
+  --adsum-brand-700: #223f8a;
+  --adsum-brand-800: #1d3470;
+  --adsum-brand-900: #172a5a;
+  --adsum-font-display: 'Space Grotesk', 'IBM Plex Sans', system-ui, sans-serif;
+  --adsum-font-ui: 'IBM Plex Sans', system-ui, sans-serif;
+  --adsum-font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --adsum-text-xs: 12px;
+  --adsum-text-sm: 13px;
+  --adsum-text-base: 15px;
+  --adsum-text-md: 16px;
+  --adsum-text-lg: 18px;
+  --adsum-text-xl: 22px;
+  --adsum-text-2xl: 28px;
+  --adsum-text-3xl: 34px;
+  --adsum-text-4xl: 44px;
+  --adsum-weight-regular: 400;
+  --adsum-weight-medium: 500;
+  --adsum-weight-semibold: 600;
+  --adsum-weight-bold: 700;
+  --adsum-weight-extrabold: 800;
+  --adsum-space-0: 0;
+  --adsum-space-1: 4px;
+  --adsum-space-2: 8px;
+  --adsum-space-3: 12px;
+  --adsum-space-4: 16px;
+  --adsum-space-5: 20px;
+  --adsum-space-6: 24px;
+  --adsum-space-8: 32px;
+  --adsum-space-10: 40px;
+  --adsum-space-12: 48px;
+  --adsum-space-16: 64px;
+  --adsum-radius-sm: 8px;
+  --adsum-radius-md: 12px;
+  --adsum-radius-lg: 16px;
+  --adsum-radius-xl: 20px;
+  --adsum-radius-pill: 999px;
+  --adsum-shadow-sm: 0 1px 2px rgba(16, 18, 24, 0.08);
+  --adsum-shadow-md: 0 8px 24px rgba(16, 18, 24, 0.12);
+  --adsum-shadow-lg: 0 18px 40px rgba(16, 18, 24, 0.22);
+  --adsum-bg: #f4f5f7;
+  --adsum-panel: #ffffff;
+  --adsum-board: #e8eaee;
+  --adsum-ink: #16181d;
+  --adsum-ink2: #3d4047;
+  --adsum-mut: #676b73;
+  --adsum-faint: #6a6e78;
+  --adsum-line: #e3e5ea;
+  --adsum-dot: #d4d7de;
+  --adsum-acc: #2a4fad;
+  --adsum-acc2: #1d3470;
+  --adsum-ok: #1f8a5b;
+  --adsum-ok-bg: #e6f3ec;
+  --adsum-danger: #c0392b;
+  --adsum-danger-bg: #fae9e7;
+  --adsum-info: #2a4fad;
+  --adsum-info-bg: #eef3fc;
+
+  /* Legacy collaboration aliases: several inline component styles reference
+     --collab-* tokens that were never defined and fell back to hardcoded hex,
+     drifting from the design system. Alias them onto the real --adsum-* tokens so
+     everything shares one palette and follows the theme (light/dark) correctly. */
+  --collab-accent: var(--adsum-acc);
+  --collab-line: var(--adsum-line);
+  --collab-muted: var(--adsum-mut);
+  --collab-card: var(--adsum-panel);
+  --collab-panel: var(--adsum-panel);
+  --collab-tint: var(--adsum-info-bg);
+}
+
+[data-theme="dark"] {
+  --adsum-bg: #101218;
+  --adsum-panel: #13151b;
+  --adsum-board: #161922;
+  --adsum-ink: #eceef2;
+  --adsum-ink2: #c7cad1;
+  --adsum-mut: #9499a3;
+  --adsum-faint: #9498a1;
+  --adsum-line: #2a2e38;
+  --adsum-dot: #262a35;
+  --adsum-acc: #5b82d8;
+  --adsum-acc2: #8aa8e6;
+  --adsum-ok: #1f8a5b;
+  --adsum-ok-bg: #16271f;
+  --adsum-danger: #c0392b;
+  --adsum-danger-bg: #2a1715;
+  --adsum-info: #2a4fad;
+  --adsum-info-bg: #1a2236;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+  --adsum-bg: #101218;
+  --adsum-panel: #13151b;
+  --adsum-board: #161922;
+  --adsum-ink: #eceef2;
+  --adsum-ink2: #c7cad1;
+  --adsum-mut: #9499a3;
+  --adsum-faint: #9498a1;
+  --adsum-line: #2a2e38;
+  --adsum-dot: #262a35;
+  --adsum-acc: #5b82d8;
+  --adsum-acc2: #8aa8e6;
+  --adsum-ok: #1f8a5b;
+  --adsum-ok-bg: #16271f;
+  --adsum-danger: #c0392b;
+  --adsum-danger-bg: #2a1715;
+  --adsum-info: #2a4fad;
+  --adsum-info-bg: #1a2236;
+  }
+}

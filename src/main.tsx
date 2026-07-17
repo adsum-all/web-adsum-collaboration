@@ -2,9 +2,11 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
 import { App } from "./App.js";
-import "@adsum/tokens/tokens.css";
+import "./tokens.css";
 import "./styles.css";
+import "./shell.css";
 import "./kanban.css";
+import "./canal.css";
 
 const root = document.getElementById("root");
 if (root) {

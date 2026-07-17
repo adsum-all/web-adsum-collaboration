@@ -1,0 +1,430 @@
+/* Additions du jalon 1 : shell étendu, sidebar, onglets, états vides. */
+
+.nav-empty {
+  color: var(--sidebar-mut);
+  font-size: var(--adsum-text-xs);
+  padding: 4px 10px;
+  margin: 0;
+}
+.nav-initiale {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  font-family: var(--adsum-font-display);
+  font-weight: 700;
+  color: #fff;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+.sidebar nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+.sidebar-foot-txt {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.sidebar-foot-nom {
+  font-size: var(--adsum-text-xs);
+  color: var(--sidebar-ink);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: linear-gradient(140deg, var(--adsum-brand-500), var(--adsum-acc2));
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-family: var(--adsum-font-display);
+  font-weight: 700;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+/* Tabs (page espace) */
+.tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--adsum-line);
+  margin-bottom: 20px;
+}
+.tab {
+  background: none;
+  border: none;
+  padding: 10px 14px;
+  font-family: inherit;
+  font-size: var(--adsum-text-sm);
+  color: var(--adsum-mut);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  font-weight: 500;
+  margin-bottom: -1px;
+}
+.tab:hover {
+  color: var(--adsum-ink);
+}
+.tab-active {
+  color: var(--adsum-acc);
+  border-bottom-color: var(--adsum-acc);
+  font-weight: 600;
+}
+.tab-panel {
+  display: block;
+}
+
+.espace-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.espace-avatar {
+  width: 46px;
+  height: 46px;
+  border-radius: var(--adsum-radius-md);
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-family: var(--adsum-font-display);
+  font-weight: 700;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+/* Empty state */
+.empty-state {
+  background: var(--adsum-panel);
+  border: 1px dashed var(--adsum-line);
+  border-radius: var(--adsum-radius-lg);
+  padding: 40px 24px;
+  text-align: center;
+  color: var(--adsum-mut);
+}
+.empty-state h2 {
+  margin: 0 0 6px;
+  font-size: var(--adsum-text-lg);
+  color: var(--adsum-ink);
+}
+.empty-state p {
+  margin: 0;
+  font-size: var(--adsum-text-sm);
+}
+
+/* ---- Sidebar: header row, collapse/pin, nav icons, mobile drawer ---- */
+.sidebar-top { display: flex; align-items: center; gap: 6px; border-bottom: 1px solid var(--sidebar-line); padding-bottom: 12px; margin-bottom: 6px; }
+.sidebar-top .brand { flex: 1; min-width: 0; border-bottom: none; padding: 4px 6px; margin-bottom: 0; }
+.sidebar-pin,
+.sidebar-close {
+  flex-shrink: 0; width: 30px; height: 30px; border-radius: 8px;
+  display: grid; place-items: center; cursor: pointer;
+  background: transparent; border: 1px solid var(--sidebar-line); color: var(--sidebar-mut);
+}
+.sidebar-pin:hover,
+.sidebar-close:hover { background: var(--sidebar-2); color: var(--sidebar-ink); }
+.sidebar-close { display: none; }
+.nav-ico {
+  width: 22px; height: 22px; flex-shrink: 0;
+  display: grid; place-items: center; color: currentColor; opacity: 0.92;
+}
+.nav-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.shell-scrim { display: none; }
+/* Burger lives in the topbar; hidden by default, shown at the mobile breakpoint
+   below. Declared BEFORE the media query so the media rule wins at small widths. */
+.topbar-burger {
+  display: none; align-items: center; justify-content: center;
+  width: 38px; height: 38px; margin-right: 4px; border-radius: 9px;
+  background: transparent; border: 1px solid var(--adsum-line); color: var(--adsum-ink); cursor: pointer;
+}
+.topbar-burger:hover { background: var(--adsum-board); }
+
+/* Mobile topbar and tabs: the search collapses to an icon so it never pushes the
+   topbar past the viewport; the space tabs scroll horizontally instead of clipping. */
+@media (max-width: 820px) {
+  .topbar-app { padding: 10px 14px; gap: 10px; }
+  .search-global { flex: 0 0 auto; max-width: none; margin-left: auto; padding: 8px 10px; }
+  .search-global .search-placeholder,
+  .search-global .kbd { display: none; }
+  .tabs { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; }
+  .tab { white-space: nowrap; flex: 0 0 auto; }
+  .cal-cell { min-height: 66px; padding: 4px; }
+  .cal-cell-num { font-size: 10px; }
+}
+
+/* Desktop collapsed rail (manual, persisted). Not applied on the mobile drawer. */
+@media (min-width: 821px) {
+  .shell-collapsed { grid-template-columns: 68px 1fr; }
+  .shell-collapsed .sidebar { padding: 20px 8px; }
+  .shell-collapsed .brand-text,
+  .shell-collapsed .nav-label,
+  .shell-collapsed .nav-group-title,
+  .shell-collapsed .nav-empty,
+  .shell-collapsed .nav-badge,
+  .shell-collapsed .sidebar-foot-txt { display: none; }
+  .shell-collapsed .sidebar-top { flex-direction: column-reverse; gap: 10px; }
+  .shell-collapsed .brand { justify-content: center; }
+  .shell-collapsed .nav-item { justify-content: center; padding: 9px 0; }
+  .shell-collapsed .sidebar-foot { justify-content: center; }
+}
+
+/* Tablet and mobile: sidebar is an off-canvas drawer opened from the topbar burger. */
+@media (max-width: 820px) {
+  .shell { grid-template-columns: 1fr; }
+  .sidebar {
+    position: fixed; top: 0; left: 0; height: 100vh; width: min(84vw, 300px);
+    flex-direction: column; flex-wrap: nowrap; align-items: stretch;
+    transform: translateX(-100%); transition: transform 0.22s ease; z-index: 1200;
+  }
+  .shell-drawer-open .sidebar { transform: translateX(0); box-shadow: 0 14px 44px rgba(2, 6, 23, 0.5); }
+  .shell-drawer-open .shell-scrim { display: block; position: fixed; inset: 0; background: rgba(2, 6, 23, 0.5); z-index: 1100; }
+  .sidebar-pin { display: none; }
+  .sidebar-close { display: grid; }
+  .topbar-burger { display: inline-flex; }
+  /* Labels always visible in the full-width drawer. */
+  .brand-text, .nav-label, .nav-group-title, .sidebar-foot-txt { display: block; }
+}
+
+/* Jalon 2 additions */
+.pastille {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  vertical-align: middle;
+}
+.pastille-ok { background: var(--adsum-ok); }
+.pastille-off { background: var(--adsum-dot); }
+
+.favori-star { color: #d4a017; }
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.form-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: var(--adsum-text-sm);
+  color: var(--adsum-mut);
+  font-weight: 500;
+}
+.form-grid input {
+  padding: 11px 12px;
+  border-radius: var(--adsum-radius-md);
+  border: 1px solid var(--adsum-line);
+  background: var(--adsum-bg);
+  color: var(--adsum-ink);
+  font-family: inherit;
+  font-size: var(--adsum-text-sm);
+}
+.form-grid input:focus {
+  outline: none;
+  border-color: var(--adsum-acc);
+  box-shadow: 0 0 0 3px rgba(42,79,173,.12);
+}
+
+.switch-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-size: var(--adsum-text-sm);
+  color: var(--adsum-ink);
+  cursor: pointer;
+}
+
+.invitation-lien {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  margin-top: 14px;
+}
+.invitation-lien label {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: var(--adsum-text-sm);
+  color: var(--adsum-mut);
+}
+.invitation-lien input {
+  padding: 10px 12px;
+  border-radius: var(--adsum-radius-md);
+  border: 1px solid var(--adsum-line);
+  background: var(--adsum-bg);
+  color: var(--adsum-ink);
+  font-family: var(--adsum-font-mono);
+  font-size: var(--adsum-text-xs);
+}
+
+.inline-input {
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--adsum-ink);
+  font-family: inherit;
+  font-size: var(--adsum-text-sm);
+}
+.inline-input:hover, .inline-input:focus {
+  border-color: var(--adsum-line);
+  background: var(--adsum-panel);
+  outline: none;
+}
+
+.et-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.btn-danger {
+  background: var(--adsum-danger);
+  color: #fff;
+  border: none;
+  padding: 11px 16px;
+  border-radius: var(--adsum-radius-md);
+  font-family: inherit;
+  font-size: var(--adsum-text-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn-danger:hover { filter: brightness(1.05); }
+.btn-active {
+  border-color: var(--adsum-acc) !important;
+  color: var(--adsum-acc) !important;
+  background: var(--adsum-info-bg) !important;
+}
+
+.board-tile-new {
+  border-style: dashed !important;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.badge-warn {
+  background: #FDF1DD;
+  color: #B6791B;
+}
+
+select {
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--adsum-line);
+  background: var(--adsum-panel);
+  color: var(--adsum-ink);
+  font-family: inherit;
+  font-size: var(--adsum-text-sm);
+}
+
+/* === Additions jalon 4 === */
+.brand-btn { background: none; border: 0; padding: 0; text-align: left; cursor: pointer; font: inherit; color: inherit; display: flex; align-items: center; gap: 10px; }
+.avatar-btn { border: 0; cursor: pointer; font: inherit; }
+.link-strong { color: var(--adsum-ink); font-weight: 600; text-align: left; }
+.nav-badge { margin-left: auto; background: var(--adsum-danger, #c0392b); color: #fff; border-radius: 999px; font-size: 11px; padding: 1px 7px; line-height: 1.4; }
+.row-between { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.row-end { display: flex; justify-content: flex-end; align-items: center; gap: 12px; margin-top: 8px; }
+
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 20px; }
+.stat-tile { background: var(--adsum-panel); border: 1px solid var(--adsum-line); border-radius: var(--adsum-radius-lg); padding: 16px; display: flex; flex-direction: column; gap: 4px; box-shadow: var(--adsum-shadow-sm); }
+.stat-tile-alert { border-color: var(--adsum-danger, #c0392b); }
+.stat-val { font-family: var(--adsum-font-display); font-size: 28px; font-weight: 700; color: var(--adsum-ink); }
+
+.section { margin-top: 20px; }
+.section h2, .section h3 { font-family: var(--adsum-font-display); margin: 0 0 10px; color: var(--adsum-ink); }
+
+/* Notifications */
+.notif-list { list-style: none; padding: 0; margin: 16px 0 0; display: flex; flex-direction: column; gap: 8px; }
+.notif-item { display: grid; grid-template-columns: 12px 1fr auto; gap: 12px; align-items: center; background: var(--adsum-panel); border: 1px solid var(--adsum-line); border-radius: var(--adsum-radius-md); padding: 12px 14px; }
+.notif-item-neuve { border-left: 3px solid var(--adsum-acc); background: var(--adsum-info-bg); }
+.notif-pastille { width: 10px; height: 10px; border-radius: 50%; background: var(--adsum-mut); display: inline-block; }
+.notif-pastille-mention { background: #7a4fbf; }
+.notif-pastille-assignation { background: var(--adsum-acc); }
+.notif-pastille-echeance { background: #c0392b; }
+.notif-pastille-carte_suivie { background: #1f8a5b; }
+.notif-actions { display: flex; gap: 6px; }
+.notif-corps p { margin: 0 0 2px; color: var(--adsum-ink); }
+
+/* Profil */
+.profil-carte { display: grid; grid-template-columns: 96px 1fr; gap: 20px; background: var(--adsum-panel); border: 1px solid var(--adsum-line); border-radius: var(--adsum-radius-lg); padding: 20px; box-shadow: var(--adsum-shadow-sm); }
+.profil-avatar { width: 96px; height: 96px; border-radius: 50%; background: var(--adsum-acc); color: #fff; display: flex; align-items: center; justify-content: center; font-family: var(--adsum-font-display); font-size: 32px; font-weight: 700; }
+.profil-form { display: flex; flex-direction: column; gap: 12px; }
+.profil-form label { display: flex; flex-direction: column; gap: 4px; font-size: var(--adsum-text-sm); color: var(--adsum-ink); }
+.profil-espaces { list-style: none; padding: 0; margin: 8px 0 0; display: flex; flex-direction: column; gap: 6px; }
+.profil-espaces li { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border: 1px solid var(--adsum-line); border-radius: var(--adsum-radius-md); background: var(--adsum-panel); }
+
+/* Calendrier */
+.cal-toolbar { display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 12px; margin-bottom: 12px; }
+.cal-nav { display: flex; align-items: center; gap: 8px; font-family: var(--adsum-font-display); }
+.cal-filtres { display: flex; gap: 10px; flex-wrap: wrap; }
+.cal-filtres label { display: flex; flex-direction: column; gap: 2px; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 1px; background: var(--adsum-line); border: 1px solid var(--adsum-line); border-radius: var(--adsum-radius-md); overflow: hidden; }
+.cal-cell { min-width: 0; }
+.cal-event, .cal-event-titre { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cal-head { background: var(--adsum-panel); text-align: center; padding: 6px; font-size: var(--adsum-text-xs); text-transform: uppercase; color: var(--adsum-mut); font-weight: 600; }
+.cal-cell { background: var(--adsum-panel); min-height: 110px; padding: 6px; display: flex; flex-direction: column; gap: 4px; }
+.cal-cell-vide { background: var(--adsum-bg, #f5f7fb); }
+.cal-cell-today { background: var(--adsum-info-bg); }
+.cal-cell-num { font-size: var(--adsum-text-xs); font-weight: 600; color: var(--adsum-mut); }
+.cal-cell-items { display: flex; flex-direction: column; gap: 3px; overflow: hidden; }
+.cal-event { text-align: left; background: var(--adsum-panel); border: 1px solid var(--adsum-line); border-left: 3px solid var(--adsum-acc); border-radius: 4px; padding: 3px 6px; font-size: 11px; cursor: pointer; color: var(--adsum-ink); font-family: inherit; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cal-event:hover { border-color: var(--adsum-acc); }
+.cal-event-urgente { background: #fdecea; }
+.cal-event-haute { background: #fff5e0; }
+.cal-event-titre { display: block; overflow: hidden; text-overflow: ellipsis; }
+
+/* Dashboard espace */
+.dashboard { display: flex; flex-direction: column; gap: 6px; }
+.repart { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.repart li { display: grid; grid-template-columns: 180px 1fr 40px; align-items: center; gap: 10px; font-size: var(--adsum-text-sm); }
+.repart-lbl { color: var(--adsum-ink); display: flex; align-items: center; gap: 6px; text-transform: capitalize; }
+.repart-bar { height: 10px; background: var(--adsum-line); border-radius: 999px; overflow: hidden; }
+.repart-fill { display: block; height: 100%; background: var(--adsum-acc); border-radius: 999px; transition: width .2s; }
+.repart-urgente { background: #c0392b; }
+.repart-haute { background: #e67e22; }
+.repart-normale { background: var(--adsum-acc); }
+.repart-basse { background: #7a8aa5; }
+.repart-val { text-align: right; color: var(--adsum-mut); font-variant-numeric: tabular-nums; }
+.et-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+
+/* Read-only profile fields (identity is managed centrally in the back office). */
+.profil-champ {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--adsum-line);
+}
+.profil-champ strong {
+  color: var(--adsum-ink);
+  font-size: var(--adsum-text-md);
+}
+
+/* Password field with show/hide toggle (aligned with the back-office design system). */
+.password-field { position: relative; display: flex; width: 100%; }
+.password-field-input { width: 100%; padding-right: 44px; }
+.password-toggle {
+  position: absolute; top: 0; bottom: 0; right: 0; width: 42px;
+  display: flex; align-items: center; justify-content: center; padding: 0;
+  border: none; background: none; color: var(--adsum-mut); cursor: pointer;
+  border-radius: var(--adsum-radius-md);
+}
+.password-toggle:hover { color: var(--adsum-ink2); }
+.password-toggle:focus-visible {
+  outline: none; color: var(--adsum-acc);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--adsum-acc) 18%, transparent);
+}
