@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import {
+  type CibleActiviteRef,
   type Cibles,
   type EvenementDetail,
   type EvenementPayload,
@@ -8,6 +9,7 @@ import {
   ajouterPieceActivite,
   creerActivite,
   listCibles,
+  listCiblesActivite,
   listTypesEvenements,
   modifierActivite,
 } from "../../lib/store.js";
@@ -24,17 +26,9 @@ import { RichEditor } from "../common/RichEditor.js";
 // single-column and scrollable for real usability. Reaches the same shared engine.
 // Times are typed in the activity's own zone and converted to UTC like the BO.
 
-const CIBLE_LABELS: Record<string, string> = {
-  general: "Toute la communauté (général)",
-  coordination: "Coordination",
-  commission: "Commission / Mission",
-  intendance: "Intendance",
-  tribu: "Tribu",
-  bergers: "Les Bergers",
-  responsables: "Les responsables (avec fonction)",
-  liste: "Liste d'adresses e-mail (groupe ad hoc)",
-};
-const CIBLE_UNITES = ["coordination", "commission", "intendance", "tribu"];
+// The destination list comes from the administrable referential
+// (GET /reference/cibles-activite), shared with the back office: no hardcoded
+// destination here, a new destination needs no code change in this form either.
 
 function Champ({ label, aide, children, full }: { label: string; aide?: string; children: JSX.Element; full?: boolean }): JSX.Element {
   return (
@@ -86,6 +80,7 @@ export function ActiviteFormComplet({ detail, onDone, onCancel }: Props): JSX.El
   const [description, setDescription] = useState(detail?.description ?? "");
   const [piecesAJoindre, setPiecesAJoindre] = useState<File[]>([]);
   const [cibles, setCibles] = useState<Cibles | null>(null);
+  const [destinations, setDestinations] = useState<CibleActiviteRef[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -94,30 +89,35 @@ export function ActiviteFormComplet({ detail, onDone, onCancel }: Props): JSX.El
 
   useEffect(() => {
     void listCibles().then(setCibles).catch(() => setCibles(null));
+    void listCiblesActivite().then(setDestinations).catch(() => setDestinations([]));
     void listTypesEvenements().then(setTypesEvenements).catch(() => setTypesEvenements([]));
   }, []);
 
   const typeCouleur = typesEvenements.find((te) => te.id === typeEvenementId)?.couleur ?? null;
 
+  const cibleCourante = destinations.find((c) => c.code === cibleType);
+  const besoinUnite = cibleCourante?.besoin_unite ?? false;
+  const estListe = cibleCourante?.type_regle === "liste";
+  const uniteTable = cibleCourante?.parametres.table ?? "";
   const options: { id: string; nom: string }[] =
-    cibleType === "coordination" ? (cibles?.coordinations ?? [])
-      : cibleType === "commission" ? (cibles?.commissions ?? [])
-        : cibleType === "intendance" ? (cibles?.intendances ?? [])
-          : cibleType === "tribu" ? (cibles?.tribus ?? []) : [];
+    uniteTable === "coordination" ? (cibles?.coordinations ?? [])
+      : uniteTable === "commission" ? (cibles?.commissions ?? [])
+        : uniteTable === "intendance" ? (cibles?.intendances ?? [])
+          : uniteTable === "tribu" ? (cibles?.tribus ?? []) : [];
 
   async function save(): Promise<void> {
     if (!titre.trim() || !debut) {
       setError("Le titre et la date de début sont obligatoires.");
       return;
     }
-    if (CIBLE_UNITES.includes(cibleType) && !cibleId) {
+    if (besoinUnite && !cibleId) {
       setError("Choisissez l'unité ciblée ou repassez sur « général ».");
       return;
     }
-    const emails = cibleType === "liste"
+    const emails = estListe
       ? emailsTexte.split(/[\n,;]+/).map((x) => x.trim().toLowerCase()).filter(Boolean)
       : [];
-    if (cibleType === "liste" && emails.length === 0) {
+    if (estListe && emails.length === 0) {
       setError("Ajoutez au moins une adresse e-mail pour un ciblage par liste.");
       return;
     }
@@ -133,7 +133,7 @@ export function ActiviteFormComplet({ detail, onDone, onCancel }: Props): JSX.El
       type_diffusion: diffusion as EvenementPayload["type_diffusion"],
       visibilite: visibilite as EvenementPayload["visibilite"],
       cible_type: cibleType as EvenementPayload["cible_type"],
-      cible_id: CIBLE_UNITES.includes(cibleType) ? cibleId : null,
+      cible_id: besoinUnite ? cibleId : null,
       cible_genre: (cibleGenre || null) as EvenementPayload["cible_genre"],
       cible_age_min: ageMin ? Number(ageMin) : null,
       cible_age_max: ageMax ? Number(ageMax) : null,
@@ -245,12 +245,17 @@ export function ActiviteFormComplet({ detail, onDone, onCancel }: Props): JSX.El
       </section>
 
       <section style={grid}>
-        <Champ label="Destinataires (qui est concerné ?)" full>
+        <Champ label="Destinataires (qui est concerné ?)" aide={cibleCourante?.description ?? undefined} full>
           <select value={cibleType} onChange={(e) => { setCibleType(e.target.value); setCibleId(null); }}>
-            {Object.keys(CIBLE_LABELS).map((k) => <option key={k} value={k}>{CIBLE_LABELS[k]}</option>)}
+            {destinations.map((c) => <option key={c.code} value={c.code}>{c.libelle}</option>)}
+            {/* Historical event whose destination was deactivated since: keep it
+                selectable so editing never silently retargets the audience. */}
+            {cibleCourante == null && destinations.length > 0 && (
+              <option value={cibleType}>{cibleType} (destination désactivée)</option>
+            )}
           </select>
         </Champ>
-        {CIBLE_UNITES.includes(cibleType) && (
+        {besoinUnite && (
           <Champ label="Unité ciblée *">
             <select value={cibleId ?? ""} onChange={(e) => setCibleId(e.target.value || null)}>
               <option value="">Choisir...</option>
@@ -258,7 +263,7 @@ export function ActiviteFormComplet({ detail, onDone, onCancel }: Props): JSX.El
             </select>
           </Champ>
         )}
-        {cibleType === "liste" && (
+        {estListe && (
           <Champ label="Adresses e-mail * (une par ligne)" full>
             <textarea value={emailsTexte} onChange={(e) => setEmailsTexte(e.target.value)} rows={3} />
           </Champ>

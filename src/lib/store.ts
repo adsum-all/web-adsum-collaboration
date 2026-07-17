@@ -266,6 +266,24 @@ export function listCibles(): Promise<Cibles> {
   return request(`${B}/cibles`, { method: "GET" }, "Unités indisponibles");
 }
 
+// Administrable destinations referential (cible_activite): the audience picker
+// loads its list from here, so a destination added, renamed or deactivated by an
+// administrator is reflected in this form without any code change.
+export interface CibleActiviteRef {
+  code: string;
+  libelle: string;
+  description: string | null;
+  categorie: string;
+  type_regle: string;
+  besoin_unite: boolean;
+  ordre: number;
+  statut: string;
+  parametres: { table?: string; attribut?: string; fonction_cles?: string[]; toutes_fonctions?: boolean };
+}
+export function listCiblesActivite(): Promise<CibleActiviteRef[]> {
+  return request(`/api/v1/reference/cibles-activite`, { method: "GET" }, "Destinations indisponibles");
+}
+
 // Published event types (catalogue) with their unique colour, for the planning
 // dropdown. Read from the shared reference endpoint (any authenticated member).
 export interface TypeEvenementRef { id: string; code: string; nom: string; couleur: string; description?: string | null }
