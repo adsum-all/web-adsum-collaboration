@@ -9,6 +9,8 @@ import { CalendrierPage } from "./components/calendrier/CalendrierPage.js";
 import { OrganigrammeView } from "./components/organigramme/OrganigrammeView.js";
 import { CanalPage } from "./components/canal/CanalPage.js";
 import { CorbeillePage } from "./components/corbeille/CorbeillePage.js";
+import { InformationsAdmin } from "./components/informations/InformationsAdmin.js";
+import { ModelesPage } from "./components/modeles/ModelesPage.js";
 import { NotificationsPage } from "./components/notifications/NotificationsPage.js";
 import { ProfilPage } from "./components/profil/ProfilPage.js";
 import { Home } from "./components/home/Home.js";
@@ -34,7 +36,7 @@ function routeToHash(r: Route): string {
     default: return `#/${r.kind}`;
   }
 }
-const ROUTES_SIMPLES = new Set(["mes-cartes", "calendrier", "organigramme", "canal", "notifications", "corbeille", "profil"]);
+const ROUTES_SIMPLES = new Set(["mes-cartes", "calendrier", "organigramme", "canal", "informations", "modeles", "notifications", "corbeille", "profil"]);
 function hashToRoute(): Route {
   if (typeof window === "undefined") return { kind: "accueil" };
   const parts = window.location.hash.replace(/^#\/?/, "").split("/").filter(Boolean);
@@ -308,6 +310,12 @@ export function App(): JSX.Element {
           {route.kind === "canal" && (
             <CanalPage />
           )}
+          {route.kind === "informations" && (
+            <InformationsAdmin token={session.token} />
+          )}
+          {route.kind === "modeles" && (
+            <ModelesPage espaces={espaces} moiId={me?.id ?? ""} />
+          )}
           {route.kind === "notifications" && (
             <NotificationsPage onOuvrirEspace={(id) => setRoute({ kind: "espace", id })} />
           )}
@@ -375,6 +383,10 @@ function crumbFor(route: Route, espace: Espace | null): { crumb: string; title: 
       return { crumb: "ORGANISATION", title: "Organigramme" };
     case "canal":
       return { crumb: "COLLABORATION", title: "Canal d'instructions" };
+    case "informations":
+      return { crumb: "COMMUNICATION", title: "Informations importantes" };
+    case "modeles":
+      return { crumb: "COLLABORATION", title: "Modèles de tableaux" };
     case "notifications":
       return { crumb: "PERSONNEL", title: "Notifications" };
     case "corbeille":
