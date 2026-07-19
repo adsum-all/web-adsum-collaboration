@@ -86,6 +86,26 @@ export function supprimerEspace(id: string, politique: PolitiqueSuppression = "c
   return request(`${B}/espaces/${id}?politique=${politique}`, { method: "DELETE" }, "Suppression impossible");
 }
 
+// Archived (reversible) workspaces the caller belongs to, listed apart from the active
+// ones so an unarchive action can be offered without polluting the main Home grid.
+export function listEspacesArchives(): Promise<Espace[]> {
+  return request(`${B}/espaces/archives`, { method: "GET" }, "Espaces archivés indisponibles");
+}
+
+// Trash: soft-deleted workspaces and boards recoverable until the retention window ends.
+export interface CorbeilleEspace { id: string; nom: string; sous_espace: boolean; supprime_le: string | null; jours_restants: number; }
+export interface CorbeilleTableau { id: string; nom: string; espace_id: string; supprime_le: string | null; jours_restants: number; }
+export interface Corbeille { retention_jours: number; espaces: CorbeilleEspace[]; tableaux: CorbeilleTableau[]; }
+export function listCorbeille(): Promise<Corbeille> {
+  return request(`${B}/corbeille`, { method: "GET" }, "Corbeille indisponible");
+}
+export function restaurerEspace(id: string): Promise<void> {
+  return request(`${B}/espaces/${id}/restaurer`, { method: "POST" }, "Restauration impossible").then(() => undefined);
+}
+export function restaurerTableau(id: string): Promise<void> {
+  return request(`${B}/tableaux-espace/${id}/restaurer`, { method: "POST" }, "Restauration impossible").then(() => undefined);
+}
+
 // Members and access requests
 export function addMembreEspace(espaceId: string, membreId: string, role: RoleEspace): Promise<Espace> {
   return request(`${B}/espaces/${espaceId}/membres`, { method: "POST", body: jbody({ membre_id: membreId, role }) }, "Ajout impossible");

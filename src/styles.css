@@ -341,7 +341,11 @@ h3 {
   padding: 26px 28px 40px;
 }
 .page {
-  max-width: 1100px;
+  max-width: var(--adsum-content-max, 1180px);
+  /* Centre the content within the main scroll area: below the max width the auto margins
+     are 0 (full width, responsive intact); above it they split evenly, removing the empty
+     gutter on the right that made the page look shifted left. */
+  margin-inline: auto;
 }
 .page-head {
   display: flex;
@@ -415,6 +419,68 @@ h3 {
   margin: 0 0 14px;
   font-size: var(--adsum-text-md);
   font-weight: 600;
+}
+.card-titre {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 14px;
+  font-size: var(--adsum-text-md);
+  font-weight: 600;
+}
+.corbeille-compte {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--adsum-mut);
+  background: var(--adsum-bg);
+  border: 1px solid var(--adsum-line);
+  border-radius: var(--adsum-radius-pill);
+  padding: 1px 9px;
+}
+.corbeille-liste {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.corbeille-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--adsum-line);
+  border-radius: var(--adsum-radius-md);
+  background: var(--adsum-bg);
+}
+.corbeille-item-nom {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  min-width: 0;
+  flex: 1;
+}
+.corbeille-item-meta {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.corbeille-item-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.corbeille-type {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--adsum-mut);
+  background: var(--adsum-panel);
+  border: 1px solid var(--adsum-line);
+  border-radius: var(--adsum-radius-sm);
+  padding: 2px 6px;
 }
 .card-grid-2 {
   display: grid;

@@ -219,3 +219,33 @@
   .canal-back { display: inline-flex; }
   .canal-auteur { text-align: left; }
 }
+
+/* Level-1 canal cards (Home-style board-tile with a clickable body + a connect action). */
+.canal-tuile {
+  gap: 10px;
+}
+.canal-tuile-corps {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.canal-tuile-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin-top: 2px;
+}
+.canal-tuile-action {
+  align-self: flex-start;
+  margin-top: 2px;
+}

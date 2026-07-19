@@ -49,14 +49,14 @@ export function ArchivesPanel({ espace, peutGerer, onChanged }: Props): JSX.Elem
                 type="button"
                 className="btn btn-danger btn-inline"
                 onClick={async () => {
-                  if (window.confirm(`Supprimer définitivement le tableau « ${t.nom} » ?`)) {
+                  if (window.confirm(`Mettre le tableau « ${t.nom} » à la corbeille ? Il restera récupérable depuis « Corbeille et archives » pendant la durée de rétention (sauf si celle-ci est de 0 jour).`)) {
                     await deleteTableauProto(t.id);
                     await reload();
                     onChanged();
                   }
                 }}
               >
-                Supprimer
+                Mettre à la corbeille
               </button>
             </span>
           )}
