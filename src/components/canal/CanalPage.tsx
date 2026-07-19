@@ -59,6 +59,10 @@ export function CanalPage(): JSX.Element {
   const [infoTg, setInfoTg] = useState<string | null>(null);
   // Instruction spaces (general workspaces): each has its own dedicated bot.
   const [espacesFull, setEspacesFull] = useState<Espace[]>([]);
+  // Level-1 sub-tab: connected channels (bot active) by default, or the ones that exist
+  // but have never been connected. Panel id opens the connection request modal for one.
+  const [ongletCanal, setOngletCanal] = useState<"connectes" | "non_connectes">("connectes");
+  const [panneauId, setPanneauId] = useState<string | null>(null);
 
   const recRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -285,56 +289,99 @@ export function CanalPage(): JSX.Element {
     </button>
   );
 
-  // ----- Level 1: only the list of workspace names the user may access -----
+  // ----- Level 1: workspace cards, split into connected vs never-connected channels -----
   if (!espaceSel) {
+    const connectes = espacesFull.filter((e) => e.instruction_bot_statut === "configure");
+    const nonConnectes = espacesFull.filter((e) => e.instruction_bot_statut !== "configure");
+    const enAttente = espacesFull.filter((e) => e.instruction_bot_statut === "demande").length;
+    const aConfigurer = nonConnectes.length - enAttente;
+    const totalInstr = messages.length;
+    const nouvellesInstr = messages.filter((m) => m.statut === "nouveau").length;
+    const liste = ongletCanal === "connectes" ? connectes : nonConnectes;
+    const panneauEspace = espacesFull.find((e) => e.id === panneauId) ?? null;
     return (
       <div className="page canal-page">
-        <div className="canal-niveau1">
-          <div className="canal-liste-head">
+        <header className="page-head">
+          <div className="row-between">
             <div>
               <p className="topbar-crumb">CANAL</p>
-              <h1 className="canal-titre">Instructions</h1>
+              <h1>Instructions</h1>
+              <p className="muted">Chaque espace de travail a son propre canal Telegram dédié. Connectez le bot d'un espace pour y recevoir ses notes vocales, puis ouvrez-le pour traiter ses instructions. Le contenu d'un espace n'est jamais visible depuis un autre.</p>
             </div>
             {actualiserBtn}
           </div>
-          <p className="muted small" style={{ margin: "0 0 12px" }}>
-            Choisissez un espace de travail pour accéder à ses instructions. Chaque espace a son propre bot
-            dédié et ses propres notes vocales ; le contenu d'un espace n'est jamais visible depuis un autre.
-          </p>
-          {infoTg && <p className="banner banner-ok small" style={{ margin: "0 0 8px" }}>{infoTg}</p>}
-          {err && <p className="canal-err">{err}</p>}
-          {espacesFull.length === 0 ? (
-            <EmptyState titre="Aucun espace de travail"
-              description="Vous n'êtes membre d'aucun espace d'instruction pour le moment." />
-          ) : (
-            <div className="canal-espaces-grille">
-              {espacesFull.map((e) => {
-                const total = messages.filter((m) => m.espace_id === e.id).length;
-                const nouveaux = messages.filter((m) => m.espace_id === e.id && m.statut === "nouveau").length;
-                const botLabel = e.instruction_bot_statut === "configure" ? "bot actif"
-                  : e.instruction_bot_statut === "demande" ? "bot demandé" : "bot à configurer";
-                return (
-                  <button key={e.id} type="button" className="canal-espace-carte" onClick={() => ouvrirEspace(e.id)}>
-                    <span className="canal-espace-avatar" aria-hidden style={{ background: e.couleur }}>{e.initiale}</span>
-                    <span className="canal-espace-info">
-                      <span className="canal-espace-nom">{e.nom}</span>
-                      <span className="muted small">
-                        {total === 0 ? "Aucune instruction" : total === 1 ? "1 instruction" : `${total} instructions`}
-                      </span>
+        </header>
+        {infoTg && <p className="banner banner-ok small" style={{ margin: "0 0 10px" }}>{infoTg}</p>}
+        {err && <p className="banner banner-error small" style={{ margin: "0 0 10px" }}>{err}</p>}
+
+        <section className="stat-grid">
+          <div className="stat-tile"><span className="stat-val">{espacesFull.length}</span><span className="muted small">Espaces</span></div>
+          <div className="stat-tile"><span className="stat-val">{connectes.length}</span><span className="muted small">Connectés</span></div>
+          <div className="stat-tile"><span className="stat-val">{enAttente}</span><span className="muted small">En attente</span></div>
+          <div className="stat-tile"><span className="stat-val">{aConfigurer}</span><span className="muted small">À configurer</span></div>
+          <div className="stat-tile"><span className="stat-val">{totalInstr}</span><span className="muted small">Instructions</span></div>
+          <div className={`stat-tile${nouvellesInstr > 0 ? " stat-tile-alert" : ""}`}><span className="stat-val">{nouvellesInstr}</span><span className="muted small">Nouvelles</span></div>
+        </section>
+
+        <div className="canal-tabs" role="tablist" style={{ marginBottom: 16 }}>
+          <button type="button" role="tab" aria-selected={ongletCanal === "connectes"} className={`canal-tab${ongletCanal === "connectes" ? " canal-tab-on" : ""}`} onClick={() => setOngletCanal("connectes")}>
+            Connectés <span className="canal-tab-count">{connectes.length}</span>
+          </button>
+          <button type="button" role="tab" aria-selected={ongletCanal === "non_connectes"} className={`canal-tab${ongletCanal === "non_connectes" ? " canal-tab-on" : ""}`} onClick={() => setOngletCanal("non_connectes")}>
+            Non connectés <span className="canal-tab-count">{nonConnectes.length}</span>
+          </button>
+        </div>
+
+        {espacesFull.length === 0 ? (
+          <EmptyState titre="Aucun espace de travail" description="Vous n'êtes membre d'aucun espace d'instruction pour le moment." />
+        ) : liste.length === 0 ? (
+          <EmptyState
+            titre={ongletCanal === "connectes" ? "Aucun canal connecté" : "Tous les canaux sont connectés"}
+            description={ongletCanal === "connectes" ? "Depuis l'onglet « Non connectés », demandez la connexion du bot d'un espace pour commencer à recevoir ses instructions." : "Chaque espace dispose déjà de son bot d'instruction actif."} />
+        ) : (
+          <div className="board-grid">
+            {liste.map((e) => {
+              const total = messages.filter((m) => m.espace_id === e.id).length;
+              const nouveaux = messages.filter((m) => m.espace_id === e.id && m.statut === "nouveau").length;
+              const connecte = e.instruction_bot_statut === "configure";
+              const demande = e.instruction_bot_statut === "demande";
+              return (
+                <div key={e.id} className="board-tile canal-tuile">
+                  <button type="button" className="canal-tuile-corps" onClick={() => (connecte ? ouvrirEspace(e.id) : setPanneauId(e.id))}>
+                    <span className="board-tile-name">
+                      <span className="espace-avatar espace-avatar-sm" aria-hidden style={{ background: e.couleur }}>{e.initiale}</span>
+                      {e.nom}
                     </span>
-                    <span className="canal-espace-badges">
-                      {nouveaux > 0 && (
-                        <span className="canal-badge canal-badge-alerte">{nouveaux} nouveau{nouveaux > 1 ? "x" : ""}</span>
-                      )}
-                      <span className={`canal-badge ${e.instruction_bot_statut === "configure" ? "canal-badge-ok" : "canal-badge-mut"}`}>{botLabel}</span>
-                      <span className="canal-espace-fleche" aria-hidden>→</span>
+                    <span className="board-tile-desc">{total === 0 ? "Aucune instruction" : total === 1 ? "1 instruction" : `${total} instructions`}</span>
+                    <span className="board-tile-meta canal-tuile-badges">
+                      {nouveaux > 0 && <span className="canal-badge canal-badge-alerte">{nouveaux} nouveau{nouveaux > 1 ? "x" : ""}</span>}
+                      <span className={`canal-badge ${connecte ? "canal-badge-ok" : "canal-badge-mut"}`}>{connecte ? "bot actif" : demande ? "bot demandé" : "bot à configurer"}</span>
                     </span>
                   </button>
-                );
-              })}
+                  {!connecte && (
+                    <button type="button" className="btn btn-primary btn-inline canal-tuile-action" onClick={() => setPanneauId(e.id)}>
+                      {demande ? "Suivre la demande" : "Connecter le canal"}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {panneauEspace && (
+          <div className="modal-backdrop" onClick={() => setPanneauId(null)} role="dialog" aria-modal="true" aria-label="Connexion du canal">
+            <div className="modal" onClick={(ev) => ev.stopPropagation()} style={{ maxWidth: 520 }}>
+              <header className="modal-head">
+                <h3 style={{ margin: 0 }}>Connexion Telegram - {panneauEspace.nom}</h3>
+                <button type="button" className="btn btn-ghost btn-inline" onClick={() => setPanneauId(null)} aria-label="Fermer">×</button>
+              </header>
+              <div className="modal-body">
+                <EspaceInstructionPanel espace={panneauEspace} onChanged={reloadEspaces} />
+              </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     );
   }

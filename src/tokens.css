@@ -37,6 +37,8 @@
   --adsum-space-10: 40px;
   --adsum-space-12: 48px;
   --adsum-space-16: 64px;
+  /* Max readable width of a centered content page (Home, Notifications, Profil, etc.). */
+  --adsum-content-max: 1180px;
   --adsum-radius-sm: 8px;
   --adsum-radius-md: 12px;
   --adsum-radius-lg: 16px;

@@ -50,6 +50,7 @@ export function TableauPage({ espace, moiId, tableauId, carteInitiale = null, on
   const [colDrag, setColDrag] = useState<string | null>(null);
   const [colOver, setColOver] = useState<string | null>(null);
   const [erreurBoard, setErreurBoard] = useState<string | null>(null);
+  const [chargeEtat, setChargeEtat] = useState<"loading" | "ok" | "error" | "introuvable">("loading");
   const [fRecherche, setFRecherche] = useState("");
   const [fPriorite, setFPriorite] = useState<string>("");
   const [fEtiquette, setFEtiquette] = useState<string>("");
@@ -83,19 +84,29 @@ export function TableauPage({ espace, moiId, tableauId, carteInitiale = null, on
   const reloadSeq = useRef(0);
   const reload = useCallback(async () => {
     const seq = ++reloadSeq.current;
-    const [t, c, k, ka] = await Promise.all([
-      getTableauProto(tableauId),
-      listColonnes(tableauId),
-      listCartes(tableauId),
-      listCartesArchivees(tableauId),
-    ]);
-    // Drop a stale reload whose response arrives after a newer one was issued, so an
-    // earlier-but-slower fetch cannot overwrite fresher data (last-write-wins bug).
-    if (seq !== reloadSeq.current) return;
-    setTableau(t);
-    setColonnes(c);
-    setCartes(k);
-    setCartesArchivees(ka);
+    try {
+      const [t, c, k, ka] = await Promise.all([
+        getTableauProto(tableauId),
+        listColonnes(tableauId),
+        listCartes(tableauId),
+        listCartesArchivees(tableauId),
+      ]);
+      // Drop a stale reload whose response arrives after a newer one was issued, so an
+      // earlier-but-slower fetch cannot overwrite fresher data (last-write-wins bug).
+      if (seq !== reloadSeq.current) return;
+      setTableau(t);
+      setColonnes(c);
+      setCartes(k);
+      setCartesArchivees(ka);
+      setChargeEtat(t ? "ok" : "introuvable");
+    } catch (e) {
+      // Without this, a rejected initial load (expired session, 403, 500) left a dead
+      // "Chargement du tableau..." spinner. Fail to an explicit state; a failed poll
+      // once the board is loaded keeps the board and only surfaces a banner.
+      if (seq !== reloadSeq.current) return;
+      setErreurBoard(e instanceof Error ? e.message : "Chargement du tableau impossible");
+      setChargeEtat((prev) => (prev === "ok" ? "ok" : "error"));
+    }
   }, [tableauId]);
 
   async function reorderColonne(targetColId: string): Promise<void> {
@@ -120,12 +131,18 @@ export function TableauPage({ espace, moiId, tableauId, carteInitiale = null, on
     void listMembres().then(setMembres);
   }, [reload]);
 
-  // Near real-time board: refresh every 5 s so cards moved or added by others
-  // appear without a manual reload. The stale-response guard above keeps it safe.
+  // Near real-time board: refresh every 5 s so cards moved or added by others appear
+  // without a manual reload. Paused while a card is open, and skipped during a drag or a
+  // column reorder, so it never clobbers an unsaved edit (which used to overwrite the
+  // assignees/labels of the open card) nor yanks the board mid-drag. The stale-response
+  // guard above keeps it safe. This single guarded poll replaces the former 5 s + 20 s pair.
   useEffect(() => {
-    const id = window.setInterval(() => { void reload(); }, 5000);
+    if (openCardId) return undefined;
+    const id = window.setInterval(() => {
+      if (document.visibilityState === "visible" && !drag && !colDrag) void reload();
+    }, 5000);
     return () => window.clearInterval(id);
-  }, [reload]);
+  }, [reload, openCardId, drag, colDrag]);
 
   // Near-real-time collaboration without a websocket stack: refetch when the tab
   // regains focus, and poll gently while the board is visible and no card is open
@@ -147,14 +164,6 @@ export function TableauPage({ espace, moiId, tableauId, carteInitiale = null, on
   }, [reload, openCardId, drag, colDrag]);
 
   useEffect(() => {
-    if (openCardId) return undefined;
-    const id = window.setInterval(() => {
-      if (document.visibilityState === "visible" && !drag) void reload();
-    }, 20000);
-    return () => window.clearInterval(id);
-  }, [reload, openCardId, drag]);
-
-  useEffect(() => {
     if (carteInitiale) setOpenCardId(carteInitiale);
   }, [carteInitiale]);
 
@@ -163,7 +172,22 @@ export function TableauPage({ espace, moiId, tableauId, carteInitiale = null, on
     return cartes.find((c) => c.id === openCardId) ?? cartesArchivees.find((c) => c.id === openCardId) ?? null;
   }, [cartes, cartesArchivees, openCardId]);
 
-  if (!tableau) return <div className="page"><p className="muted">Chargement du tableau...</p></div>;
+  if (chargeEtat === "loading") return <div className="page"><p className="muted">Chargement du tableau...</p></div>;
+  if (!tableau) {
+    const introuvable = chargeEtat === "introuvable";
+    return (
+      <div className="page">
+        <div className="empty-state">
+          <h2>{introuvable ? "Tableau introuvable" : "Chargement impossible"}</h2>
+          <p>{introuvable ? "Ce tableau n'existe plus ou vous n'y avez pas accès." : (erreurBoard ?? "Une erreur est survenue lors du chargement du tableau.")}</p>
+          <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
+            {!introuvable && <button type="button" className="btn btn-primary" onClick={() => void reload()}>Réessayer</button>}
+            <button type="button" className="btn btn-ghost" onClick={onRetour}>Retour à l'espace</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   function exportCsv(): void {
     const rows = [["#", "Titre", "Colonne", "Priorité", "Échéance", "Étiquettes", "Assignés", "Description"]];
@@ -199,6 +223,21 @@ export function TableauPage({ espace, moiId, tableauId, carteInitiale = null, on
     setDragOver(null);
     try {
       await moveCarte(carteId, colonneId, index);
+    } catch (e) {
+      setErreurBoard(e instanceof Error ? e.message : "Déplacement impossible");
+    } finally {
+      await reload();
+    }
+  }
+
+  // Touch/keyboard move: send a card to the adjacent column (append at its end). This is
+  // the accessible fallback to HTML5 drag, which does not work on touch nor keyboard.
+  async function bougerCarteColonne(carteId: string, colIdx: number, dir: -1 | 1): Promise<void> {
+    const cible = colonnes[colIdx + dir];
+    if (!cible) return;
+    const fin = cartes.filter((c) => c.colonne_id === cible.id).length;
+    try {
+      await moveCarte(carteId, cible.id, fin);
     } catch (e) {
       setErreurBoard(e instanceof Error ? e.message : "Déplacement impossible");
     } finally {
@@ -344,7 +383,7 @@ export function TableauPage({ espace, moiId, tableauId, carteInitiale = null, on
       ) : (
       <div className="kanban">
 
-        {colonnes.map((col) => {
+        {colonnes.map((col, idxCol) => {
           const cartesCol = cartesFiltrees
             .filter((c) => c.colonne_id === col.id)
             .sort((a, b) => a.position - b.position);
@@ -359,6 +398,9 @@ export function TableauPage({ espace, moiId, tableauId, carteInitiale = null, on
               peutGererCol={peutGererCol}
               peutCreerCarte={peutCreerCarte}
               peutDeplacer={peutDeplacer}
+              estPremiere={idxCol === 0}
+              estDerniere={idxCol === colonnes.length - 1}
+              onBougerCarte={(carteId, dir) => void bougerCarteColonne(carteId, idxCol, dir)}
               dragOver={dragOver?.colonneId === col.id ? dragOver.index : null}
               draggingId={drag?.carteId ?? null}
               onDragStart={(carteId) => setDrag({ carteId, from: col.id })}
@@ -447,6 +489,9 @@ interface ColonneVueProps {
   onDragEnd: () => void;
   onDragOverIndex: (index: number) => void;
   onDrop: (index: number) => void;
+  estPremiere: boolean;
+  estDerniere: boolean;
+  onBougerCarte: (carteId: string, dir: -1 | 1) => void;
   onOpen: (id: string) => void;
   onCreated: () => Promise<void>;
   onRename: (nom: string) => Promise<void>;
@@ -476,6 +521,9 @@ function ColonneVue({
   onDragEnd,
   onDragOverIndex,
   onDrop,
+  estPremiere,
+  estDerniere,
+  onBougerCarte,
   onOpen,
   onCreated,
   onRename,
@@ -627,6 +675,10 @@ function ColonneVue({
                 onDragEnd={onDragEnd}
                 onDragOverIndex={(pos) => onDragOverIndex(pos === "before" ? i : i + 1)}
                 onOpen={() => onOpen(c.id)}
+                canMove={peutDeplacer}
+                isFirstColonne={estPremiere}
+                isLastColonne={estDerniere}
+                onMove={(dir) => onBougerCarte(c.id, dir)}
               />
             ))}
             {cartes.length > 0 && dragOver === cartes.length && draggingId && (

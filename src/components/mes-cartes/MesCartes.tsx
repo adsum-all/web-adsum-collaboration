@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { listEspaces, listMesCartes } from "../../lib/store.js";
 import type { CarteProto, Espace } from "../../lib/types.js";
@@ -17,16 +17,28 @@ export function MesCartes({ moiId, onOuvrirEspace }: Props): JSX.Element {
   const [cartes, setCartes] = useState<CarteAvecEspace[]>([]);
   const [espaces, setEspaces] = useState<Espace[]>([]);
   const [loading, setLoading] = useState(true);
+  const [erreur, setErreur] = useState<string | null>(null);
 
-  useEffect(() => {
-    void Promise.all([listMesCartes(), listEspaces()]).then(([c, e]) => {
-      setCartes(c as CarteAvecEspace[]);
-      setEspaces(e);
-      setLoading(false);
-    });
-  }, [moiId]);
+  const charger = useCallback((): void => {
+    setLoading(true);
+    setErreur(null);
+    void Promise.all([listMesCartes(), listEspaces()])
+      .then(([c, e]) => { setCartes(c as CarteAvecEspace[]); setEspaces(e); setLoading(false); })
+      // Without this catch a rejected fetch (expired session, 403, 500) left the spinner
+      // spinning forever: surface the error and offer a retry instead.
+      .catch((err: unknown) => { setErreur(err instanceof Error ? err.message : "Chargement impossible"); setLoading(false); });
+  }, []);
+  useEffect(charger, [charger, moiId]);
 
   if (loading) return <div className="page"><p className="muted">Chargement...</p></div>;
+  if (erreur) {
+    return (
+      <div className="page">
+        <EmptyState titre="Chargement impossible" description={erreur}
+          action={<button type="button" className="btn btn-primary" onClick={charger}>Réessayer</button>} />
+      </div>
+    );
+  }
 
   const espaceDe = (c: CarteAvecEspace): Espace | undefined =>
     c.espace_id ? espaces.find((e) => e.id === c.espace_id) : undefined;

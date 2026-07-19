@@ -4,7 +4,11 @@
 }
 .board-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  /* auto-fit (not auto-fill) so a handful of tiles spread across the row instead of
+     leaving phantom empty columns on the right; capped so a single tile keeps a natural
+     card size rather than stretching edge to edge, and left-aligned within the grid. */
+  grid-template-columns: repeat(auto-fit, minmax(240px, 320px));
+  justify-content: start;
   gap: 16px;
 }
 .board-tile {

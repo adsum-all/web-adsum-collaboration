@@ -35,7 +35,10 @@ export function TabReglages({ espace, roleReel, viewAs, onViewAs, onChanged }: P
   const peutEcrire = peutEcrireCollaboration();
   const peutGererEt = peutEcrire && peut(espace, roleReel, "gerer_etiquettes");
   const peutModifier = peutEcrire && peut(espace, roleReel, "gerer_membres");
-  const estProprio = roleReel === "proprietaire" && peutEcrire;
+  // Archive/delete a workspace is a GERANTS action server-side (owner OR admin of the
+  // space): mirror that here so a managing admin sees the danger zone the API allows,
+  // instead of restricting it to the owner alone.
+  const estGerant = (roleReel === "proprietaire" || roleReel === "admin") && peutEcrire;
   const [suppr, setSuppr] = useState(false);
   const [supprBusy, setSupprBusy] = useState(false);
   const [supprErr, setSupprErr] = useState<string | null>(null);
@@ -244,7 +247,7 @@ export function TabReglages({ espace, roleReel, viewAs, onViewAs, onChanged }: P
         <ArchivesPanel espace={espace} peutGerer={peutEcrire && peut(espace, roleReel, "archiver")} onChanged={onChanged} />
       </section>
 
-      {estProprio && (
+      {estGerant && (
         <section className="card" style={{ borderColor: "var(--adsum-danger, #c0392b)" }}>
           <h2 className="card-title">Zone de danger, suppression de l'espace</h2>
           <p className="muted small">

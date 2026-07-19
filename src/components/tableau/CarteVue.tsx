@@ -11,6 +11,12 @@ interface CarteVueProps {
   onDragEnd: () => void;
   onDragOverIndex: (pos: "before" | "after") => void;
   onOpen: () => void;
+  // Touch/keyboard alternative to HTML5 drag (which does not work on touch nor keyboard):
+  // move the card to the adjacent column. Shown only when the user may move cards.
+  canMove?: boolean;
+  isFirstColonne?: boolean;
+  isLastColonne?: boolean;
+  onMove?: (dir: -1 | 1) => void;
 }
 
 // A single kanban card tile: labels, title, meta badges (number, priority, due date,
@@ -27,6 +33,10 @@ export function CarteVue({
   onDragEnd,
   onDragOverIndex,
   onOpen,
+  canMove = false,
+  isFirstColonne = false,
+  isLastColonne = false,
+  onMove,
 }: CarteVueProps): JSX.Element {
   const etiquettes = espace.etiquettes.filter((e) => carte.etiquettes.includes(e.id));
   const assignes = membres.filter((m) => carte.assignes.includes(m.id));
@@ -96,6 +106,14 @@ export function CarteVue({
             </span>
           )}
         </button>
+        {canMove && onMove && (
+          <div className="kanban-card-move">
+            <button type="button" aria-label="Déplacer vers la colonne précédente" title="Colonne précédente"
+              disabled={isFirstColonne} onClick={() => onMove(-1)}>‹</button>
+            <button type="button" aria-label="Déplacer vers la colonne suivante" title="Colonne suivante"
+              disabled={isLastColonne} onClick={() => onMove(1)}>›</button>
+          </div>
+        )}
       </article>
     </>
   );
