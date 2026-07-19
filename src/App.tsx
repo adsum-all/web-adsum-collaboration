@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { type Session } from "./api.js";
 import { Login } from "./components/Login.js";
@@ -22,9 +22,33 @@ import { getEspace, initStore, listEspaces, listNotifications, rejoindreEspace, 
 import type { Espace, Membre } from "./lib/types.js";
 import { clearSession, loadSession, saveSession } from "./session.js";
 
+// The current view is mirrored in the URL hash so a refresh (or a shared link, or the
+// browser back/forward) lands back on the SAME page instead of the home, and never
+// signs the user out of where they were. No router library: the hash is the single
+// source of truth, serialized here and restored on load.
+function routeToHash(r: Route): string {
+  switch (r.kind) {
+    case "accueil": return "#/";
+    case "espace": return `#/espace/${r.id}`;
+    case "tableau": return `#/tableau/${r.espaceId}/${r.id}${r.carteId ? `/${r.carteId}` : ""}`;
+    default: return `#/${r.kind}`;
+  }
+}
+const ROUTES_SIMPLES = new Set(["mes-cartes", "calendrier", "organigramme", "canal", "notifications", "corbeille", "profil"]);
+function hashToRoute(): Route {
+  if (typeof window === "undefined") return { kind: "accueil" };
+  const parts = window.location.hash.replace(/^#\/?/, "").split("/").filter(Boolean);
+  const k = parts[0];
+  if (!k) return { kind: "accueil" };
+  if (k === "espace" && parts[1]) return { kind: "espace", id: parts[1] };
+  if (k === "tableau" && parts[1] && parts[2]) return { kind: "tableau", espaceId: parts[1], id: parts[2], carteId: parts[3] };
+  if (ROUTES_SIMPLES.has(k)) return { kind: k } as Route;
+  return { kind: "accueil" };
+}
+
 export function App(): JSX.Element {
   const [session, setSession] = useState<Session | null>(() => loadSession());
-  const [route, setRoute] = useState<Route>({ kind: "accueil" });
+  const [route, setRoute] = useState<Route>(() => hashToRoute());
   const [espaces, setEspaces] = useState<Espace[]>([]);
   const [nbNotifs, setNbNotifs] = useState(0);
   const [tick, setTick] = useState(0);
@@ -54,6 +78,27 @@ export function App(): JSX.Element {
     });
   };
   const navigate = (r: Route): void => { setRoute(r); setDrawerOpen(false); };
+
+  // Keep the URL hash in sync with the route (covers every setRoute call, not only
+  // navigate). A ref remembers our own write so the hashchange listener below ignores it
+  // and only reacts to EXTERNAL changes (browser back/forward, a manual edit), avoiding a
+  // set-route -> set-hash -> set-route loop.
+  const dernierHash = useRef<string>("");
+  useEffect(() => {
+    const h = routeToHash(route);
+    dernierHash.current = h;
+    if (typeof window !== "undefined" && window.location.hash !== h) {
+      window.history.replaceState(null, "", h);
+    }
+  }, [route]);
+  useEffect(() => {
+    const onHash = (): void => {
+      if (window.location.hash === dernierHash.current) return;
+      setRoute(hashToRoute());
+    };
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, []);
 
   const reloadEspaces = (): void => {
     void listEspaces().then(setEspaces);
