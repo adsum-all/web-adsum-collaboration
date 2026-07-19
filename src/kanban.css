@@ -4,11 +4,10 @@
 }
 .board-grid {
   display: grid;
-  /* auto-fit (not auto-fill) so a handful of tiles spread across the row instead of
-     leaving phantom empty columns on the right; capped so a single tile keeps a natural
-     card size rather than stretching edge to edge, and left-aligned within the grid. */
-  grid-template-columns: repeat(auto-fit, minmax(240px, 320px));
-  justify-content: start;
+  /* auto-fit + 1fr: the tiles GROW to fill the whole row width instead of staying capped
+     and left-packed (which left an empty gutter on the right). As many ~280px columns as
+     fit, each stretching to share the remaining space evenly, so the area is fully used. */
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 16px;
 }
 .board-tile {
