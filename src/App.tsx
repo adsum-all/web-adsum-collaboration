@@ -314,7 +314,7 @@ export function App(): JSX.Element {
             <InformationsAdmin token={session.token} />
           )}
           {route.kind === "modeles" && (
-            <ModelesPage espaces={espaces} moiId={me?.id ?? ""} />
+            <ModelesPage moiId={me?.id ?? ""} />
           )}
           {route.kind === "notifications" && (
             <NotificationsPage onOuvrirEspace={(id) => setRoute({ kind: "espace", id })} />

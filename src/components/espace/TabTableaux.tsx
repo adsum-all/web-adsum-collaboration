@@ -11,6 +11,7 @@ import {
 import { peut, roleDansEspace } from "../../lib/permissions.js";
 import type { Espace, TableauProto, VisibiliteTableau } from "../../lib/types.js";
 import { EmptyState } from "../common/EmptyState.js";
+import { ModelePreview } from "../modeles/ModelePreview.js";
 
 interface Props {
   espace: Espace;
@@ -27,6 +28,10 @@ export function TabTableaux({ espace, moiId, onOuvrir }: Props): JSX.Element {
   const [visibilite, setVisibilite] = useState<VisibiliteTableau>("espace");
   const [modele, setModele] = useState<string>("vide");
   const [catalogue, setCatalogue] = useState<ModeleCatalogue[]>([]);
+  const [apercu, setApercu] = useState<ModeleCatalogue | null>(null);
+
+  const standards = catalogue.filter((m) => m.source !== "personnalise");
+  const persos = catalogue.filter((m) => m.source === "personnalise");
 
   const role = roleDansEspace(espace, moiId);
   // Creating a board writes on the server (require collaboration.gerer), so the
@@ -46,10 +51,10 @@ export function TabTableaux({ espace, moiId, onOuvrir }: Props): JSX.Element {
   }, [espace.id]);
 
   useEffect(() => {
-    // Pass the space id so the picker also offers this workspace custom templates,
-    // not only the built-in catalogue.
-    void listModelesCatalogue(espace.id).then(setCatalogue).catch(() => undefined);
-  }, [espace.id]);
+    // The catalogue is global: built-in models plus every shared custom template, the
+    // same in every workspace (plus the caller's private ones).
+    void listModelesCatalogue().then(setCatalogue).catch(() => undefined);
+  }, []);
 
   async function creer(): Promise<void> {
     if (!nom.trim()) return;
@@ -99,28 +104,41 @@ export function TabTableaux({ espace, moiId, onOuvrir }: Props): JSX.Element {
                 <span>Tableau privé (visible seulement pour ses participants)</span>
               </label>
               <div style={{ marginTop: 10 }}>
-                <span className="modal-section-titre">Partir d'un modèle ou de zéro</span>
-                <div className="modele-grid">
-                  {catalogue.map((m) => (
-                    <button
-                      key={m.id}
-                      type="button"
-                      className={`modele-carte${modele === m.id ? " modele-carte-on" : ""}`}
-                      onClick={() => setModele(m.id)}
-                    >
-                      <span className="modele-libelle">{m.libelle}</span>
-                      <span className="modele-desc">{m.description}</span>
-                      <span className="modele-colonnes">
-                        {m.colonnes.map((c, i) => (
-                          <span key={i} className="modele-col" title={c.wip ? `${c.nom} (WIP ${c.wip})` : c.nom}>
-                            <span className="modele-col-dot" style={{ background: c.couleur ?? "var(--adsum-line)" }} />
-                            {c.nom}{c.wip ? ` · ${c.wip}` : ""}
-                          </span>
+                <span className="modal-section-titre">Choisir un modèle ou partir de zéro</span>
+                <p className="muted small" style={{ margin: "2px 0 8px" }}>
+                  Cliquez sur « Aperçu » pour voir la structure d'un modèle avant de l'utiliser.
+                </p>
+                {[{ cle: "std", titre: "Modèles standards", items: standards },
+                  { cle: "perso", titre: "Modèles personnalisés", items: persos }].map((g) => (
+                  g.items.length > 0 && (
+                    <div key={g.cle} className="modele-groupe">
+                      <span className="modele-groupe-titre">{g.titre}</span>
+                      <div className="modele-grid">
+                        {g.items.map((m) => (
+                          <div key={m.id} className={`modele-carte-wrap${modele === m.id ? " is-on" : ""}`}>
+                            <button
+                              type="button"
+                              className={`modele-carte${modele === m.id ? " modele-carte-on" : ""}`}
+                              onClick={() => setModele(m.id)}
+                            >
+                              <span className="modele-libelle">{m.libelle}</span>
+                              <span className="modele-desc">{m.description}</span>
+                              <span className="modele-colonnes">
+                                {m.colonnes.map((c, i) => (
+                                  <span key={i} className="modele-col" title={c.wip ? `${c.nom} (WIP ${c.wip})` : c.nom}>
+                                    <span className="modele-col-dot" style={{ background: c.couleur ?? "var(--adsum-line)" }} />
+                                    {c.nom}{c.wip ? ` · ${c.wip}` : ""}
+                                  </span>
+                                ))}
+                              </span>
+                            </button>
+                            <button type="button" className="modele-apercu-lien" onClick={() => setApercu(m)}>Aperçu</button>
+                          </div>
                         ))}
-                      </span>
-                    </button>
-                  ))}
-                </div>
+                      </div>
+                    </div>
+                  )
+                ))}
               </div>
 
               <div className="modal-actions" style={{ marginTop: 10 }}>
@@ -178,6 +196,14 @@ export function TabTableaux({ espace, moiId, onOuvrir }: Props): JSX.Element {
               </div>
             ))}
         </div>
+      )}
+
+      {apercu && (
+        <ModelePreview
+          modele={apercu}
+          onClose={() => setApercu(null)}
+          onUtiliser={() => { setModele(apercu.id); setApercu(null); if (!creation) setCreation(true); }}
+        />
       )}
     </div>
   );
