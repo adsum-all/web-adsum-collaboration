@@ -128,7 +128,7 @@ export function TableauPage({ espace, moiId, tableauId, carteInitiale = null, on
 
   useEffect(() => {
     void reload();
-    void listMembres().then(setMembres);
+    void listMembres().then(setMembres).catch(() => undefined);
   }, [reload]);
 
   // Near real-time board: refresh every 5 s so cards moved or added by others appear
@@ -563,13 +563,13 @@ function ColonneVue({
       className={`kanban-col${colonne.repliee ? " kanban-col-repliee" : ""}${wipDepasse ? " kanban-col-wip-over" : ""}`}
       onDragOver={(e) => { if (draggingCol) { e.preventDefault(); onColDragOver(); } }}
       onDrop={(e) => { if (draggingCol) { e.preventDefault(); onColDrop(); } }}
-      style={colSurvole ? { boxShadow: "inset 3px 0 0 0 var(--accent, #0EA5E9)" } : undefined}
+      style={colSurvole ? { boxShadow: "inset 3px 0 0 0 var(--adsum-acc, #0EA5E9)" } : undefined}
     >
       {colonne.couleur && <div className="kanban-col-bar" style={{ background: colonne.couleur }} aria-hidden="true" />}
       <header className="kanban-col-head">
         {peutGererCol && !editNom && (
           <span draggable title="Deplacer la colonne" onDragStart={onColDragStart} onDragEnd={onColDragEnd}
-            style={{ cursor: "grab", color: "var(--muted, #9aa4b2)", userSelect: "none", paddingRight: 2 }}>≡</span>
+            style={{ cursor: "grab", color: "var(--adsum-mut, #9aa4b2)", userSelect: "none", paddingRight: 2 }}>≡</span>
         )}
 
         {editNom && peutGererCol ? (
@@ -740,6 +740,7 @@ function ListeVue({ colonnes, cartes, etiquettes, membres, onOpen }: ListeVuePro
           </select>
         </label>
       </div>
+      <div className="table-cartes-wrap">
       <table className="table-cartes">
         <thead>
           <tr>
@@ -752,9 +753,9 @@ function ListeVue({ colonnes, cartes, etiquettes, membres, onOpen }: ListeVuePro
             const ets = etiquettes.filter((e) => c.etiquettes.includes(e.id));
             const as = membres.filter((m) => c.assignes.includes(m.id));
             return (
-              <tr key={c.id} onClick={() => onOpen(c.id)} className="table-cartes-row">
+              <tr key={c.id} className="table-cartes-row">
                 <td className="muted small">#{c.numero}</td>
-                <td>{c.titre}</td>
+                <td><button type="button" className="liste-carte-titre" onClick={() => onOpen(c.id)}>{c.titre}</button></td>
                 <td>{col?.nom ?? "-"}</td>
                 <td><span className={`badge badge-prio badge-prio-${c.priorite}`}>{libellePriorite(c.priorite)}</span></td>
                 <td>{c.echeance ? <span className={`badge ${echeanceLate(c.echeance) ? "badge-warn" : "badge-mut"}`}>{formatDate(c.echeance)}</span> : "-"}</td>
@@ -772,6 +773,7 @@ function ListeVue({ colonnes, cartes, etiquettes, membres, onOpen }: ListeVuePro
           {rows.length === 0 && (<tr><td colSpan={7} className="muted small">Aucune carte.</td></tr>)}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

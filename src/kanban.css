@@ -658,3 +658,20 @@
 .badge-prio-haute { background: #f59e0b; color: #fff; }
 .badge-prio-normale { background: var(--adsum-line); color: var(--adsum-mut); }
 .badge-prio-basse { background: transparent; border: 1px solid var(--adsum-line); color: var(--adsum-mut); }
+
+/* List view: horizontal scroll container so 7 columns never overflow the page on mobile. */
+.table-cartes-wrap { overflow-x: auto; }
+.table-cartes-wrap .table-cartes { min-width: 640px; }
+/* Card title as an accessible button (keyboard focus + Enter), link-styled. */
+.liste-carte-titre {
+  border: none; background: none; padding: 0; margin: 0; font: inherit; text-align: left;
+  color: var(--adsum-ink); font-weight: 600; cursor: pointer;
+}
+.liste-carte-titre:hover { color: var(--adsum-acc); text-decoration: underline; }
+
+/* Warning banner (referenced by the board and card error banners; was undefined). */
+.banner-warn {
+  background: var(--adsum-info-bg, #fff4e5);
+  color: var(--adsum-danger, #b26a00);
+  border: 1px solid var(--adsum-line);
+}

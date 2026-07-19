@@ -31,7 +31,7 @@ export function Home({ espaces, onOuvrir, onCree, currentNom }: HomeProps): JSX.
   // collaboration.gerer), so a supervise-only account must not see the button.
   const peutCreerEspace = peutEcrireCollaboration();
 
-  useEffect(() => { void statsGlobales().then(setStats); }, [espaces]);
+  useEffect(() => { void statsGlobales().then(setStats).catch(() => undefined); }, [espaces]);
 
 
   async function creer(): Promise<void> {

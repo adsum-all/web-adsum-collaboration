@@ -60,9 +60,9 @@ export function ActiviteDrawer({ activiteId, onClose, onChanged }: Props): JSX.E
         role="dialog"
         aria-modal="true"
         aria-label="Détails de l'activité"
-        style={{ position: "fixed", top: 0, right: 0, bottom: 0, width: "min(560px, 96vw)", background: "var(--bg, #fff)", color: "var(--fg, #111)", boxShadow: "-8px 0 24px rgba(0,0,0,.18)", zIndex: 61, display: "flex", flexDirection: "column" }}
+        style={{ position: "fixed", top: 0, right: 0, bottom: 0, width: "min(560px, 96vw)", background: "var(--adsum-panel, #fff)", color: "var(--adsum-ink, #111)", boxShadow: "-8px 0 24px rgba(0,0,0,.18)", zIndex: 61, display: "flex", flexDirection: "column" }}
       >
-        <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 18px", borderBottom: "1px solid var(--border, #e2e2e2)" }}>
+        <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 18px", borderBottom: "1px solid var(--adsum-line, #e2e2e2)" }}>
           <strong style={{ fontSize: 16 }}>{edition ? "Modifier l'activité" : "Activité"}</strong>
           <div style={{ display: "flex", gap: 8 }}>
             {d && peutGerer && !edition && !d.annule && (
@@ -131,7 +131,7 @@ export function ActiviteDrawer({ activiteId, onClose, onChanged }: Props): JSX.E
                 </div>
               )}
 
-              <div style={{ borderTop: "1px solid var(--border, #e2e2e2)", paddingTop: 12 }}>
+              <div style={{ borderTop: "1px solid var(--adsum-line, #e2e2e2)", paddingTop: 12 }}>
                 <PiecesEvenement activiteId={activiteId} peutGerer={peutGerer && !d.annule} />
               </div>
 
@@ -147,7 +147,7 @@ export function ActiviteDrawer({ activiteId, onClose, onChanged }: Props): JSX.E
               )}
 
               {peutGerer && !d.annule && (
-                <div style={{ borderTop: "1px solid var(--border, #e2e2e2)", paddingTop: 12, display: "flex", gap: 8 }}>
+                <div style={{ borderTop: "1px solid var(--adsum-line, #e2e2e2)", paddingTop: 12, display: "flex", gap: 8 }}>
                   <button type="button" className="btn btn-primary btn-inline" onClick={() => setEdition(true)}>Modifier</button>
                   <button type="button" className="btn btn-danger btn-inline" disabled={busy} onClick={() => void annuler()}>Annuler l'activité</button>
                 </div>

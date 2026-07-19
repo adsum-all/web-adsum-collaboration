@@ -339,7 +339,7 @@ export function ActiviteFormComplet({ detail, onDone, onCancel }: Props): JSX.El
         </label>
       )}
 
-      <div style={{ display: "flex", gap: 8, position: "sticky", bottom: 0, background: "var(--bg, #fff)", paddingTop: 8 }}>
+      <div style={{ display: "flex", gap: 8, position: "sticky", bottom: 0, background: "var(--adsum-panel, #fff)", paddingTop: 8 }}>
         <button type="button" className="btn btn-primary" disabled={busy || !titre.trim()} onClick={() => void save()}>
           {busy ? "Enregistrement..." : estEdition ? (toucherSerie ? "Enregistrer pour toute la série" : "Enregistrer") : "Créer l'activité"}
         </button>

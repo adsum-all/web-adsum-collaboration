@@ -69,7 +69,6 @@ export function CanalPage(): JSX.Element {
   const streamRef = useRef<MediaStream | null>(null);
   const startRef = useRef(0);
   const timerRef = useRef<number | null>(null);
-  const pollRef = useRef<number | null>(null);
 
   // Automatic ingestion: pull new Telegram voice notes without any click. Inside a
   // workspace we poll ONLY its dedicated bot (``espaceId``) so a note surfaces near
@@ -135,7 +134,6 @@ export function CanalPage(): JSX.Element {
     const importId = window.setInterval(importTick, espaceSel ? 2000 : 8000);
     const listId = window.setInterval(listTick, 4000);
     const espacesId = window.setInterval(espacesTick, 12000);
-    pollRef.current = importId;
     const onVisible = (): void => {
       if (document.visibilityState !== "visible") return;
       importTick(); listTick(); espacesTick();

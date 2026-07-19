@@ -153,8 +153,8 @@ export function DescriptionEditor({ value, membres, disabled, onSave }: Props): 
   return (
     <div>
       <span className="modal-section-titre">Description</span>
-      <div style={{ border: "1px solid var(--border, #d7dbe3)", borderRadius: 10, overflow: "hidden", position: "relative" }}>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 4, padding: 6, borderBottom: "1px solid var(--border, #e2e2e2)", background: "var(--bg-soft, #f7f8fa)" }}>
+      <div style={{ border: "1px solid var(--adsum-line, #d7dbe3)", borderRadius: 10, overflow: "hidden", position: "relative" }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 4, padding: 6, borderBottom: "1px solid var(--adsum-line, #e2e2e2)", background: "var(--adsum-board, #f7f8fa)" }}>
           {TOOLS.map((t) => (
             <button key={t.label} type="button" className="btn btn-ghost btn-inline" title={t.title}
               onMouseDown={(e) => { e.preventDefault(); exec(t.cmd, t.arg); }}

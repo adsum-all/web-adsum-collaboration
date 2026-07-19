@@ -323,8 +323,10 @@ function OngletPieces({ message, busy, run }: { message: CanalMessage; busy: boo
         <div className="canal-pieces">
           {message.pieces.map((p) => (
             <span key={p.id} className="canal-chip">
-              <a href={p.data_url ?? "#"} target="_blank" rel="noopener noreferrer">{p.nom}</a>
-              <a href={downloadUrl(p)} download={p.nom} title="Télécharger">↓</a>
+              {p.data_url
+                ? <a href={p.data_url} target="_blank" rel="noopener noreferrer">{p.nom}</a>
+                : <span>{p.nom}</span>}
+              <a href={downloadUrl(p)} download={p.nom} title="Télécharger" aria-label={`Télécharger ${p.nom}`}>↓</a>
               <button type="button" disabled={busy} onClick={() => void run(supprimerPieceCanal(p.id))} aria-label="Retirer">✕</button>
             </span>
           ))}

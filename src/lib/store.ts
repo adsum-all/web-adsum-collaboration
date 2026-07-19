@@ -116,9 +116,6 @@ export function changeRoleMembre(espaceId: string, membreId: string, role: RoleE
 export function removeMembreEspace(espaceId: string, membreId: string): Promise<Espace> {
   return request(`${B}/espaces/${espaceId}/membres/${membreId}`, { method: "DELETE" }, "Retrait impossible");
 }
-export function demanderAcces(espaceId: string, membreId: string): Promise<Espace> {
-  return request(`${B}/espaces/${espaceId}/demandes`, { method: "POST", body: jbody({ membre_id: membreId }) }, "Demande impossible");
-}
 export function accepterDemande(espaceId: string, demandeId: string, role: RoleEspace = "membre"): Promise<Espace> {
   return request(`${B}/espaces/${espaceId}/demandes/${demandeId}/accepter`, { method: "POST", body: jbody({ role }) }, "Action impossible");
 }

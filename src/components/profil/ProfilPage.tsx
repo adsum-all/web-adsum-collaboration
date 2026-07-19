@@ -36,9 +36,9 @@ export function ProfilPage(): JSX.Element {
 
   useEffect(() => {
     // Read the real identity from the server (nom_affiche), never a stale cache.
-    void getMoi().then(setMe);
-    void listEspaces().then(setEspaces);
-    void listMesCartes().then((c) => setNbCartes(c.length));
+    void getMoi().then(setMe).catch(() => undefined);
+    void listEspaces().then(setEspaces).catch(() => undefined);
+    void listMesCartes().then((c) => setNbCartes(c.length)).catch(() => undefined);
   }, []);
 
   function choisirTheme(v: Theme): void {

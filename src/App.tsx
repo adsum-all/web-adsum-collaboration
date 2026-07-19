@@ -277,7 +277,6 @@ export function App(): JSX.Element {
         <Topbar
           crumb={crumbTitle.crumb}
           title={crumbTitle.title}
-          onSearch={(q) => { setSearchQ(q); setSearchOpen(true); }}
           onOpenSearch={() => { setSearchQ(""); setSearchOpen(true); }}
           onOpenMenu={() => setDrawerOpen(true)}
         />
