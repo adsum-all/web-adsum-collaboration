@@ -291,6 +291,27 @@ export function listTypesEvenements(): Promise<TypeEvenementRef[]> {
   return request(`/api/v1/reference/types-evenements`, { method: "GET" }, "Types d'événements indisponibles");
 }
 
+// Read-only published organisation chart, for consultation in collaboration.
+export interface OrgNoeud {
+  id: string;
+  type_noeud: string;
+  nom: string | null;
+  sous_titre?: string | null;
+  membre_nom?: string | null;
+  photo_url?: string | null;
+  couleur?: string | null;
+  effectif?: number | null;
+}
+export interface OrgLien { id: string; source_id: string; cible_id: string; type_lien: string; libelle?: string | null }
+export interface OrganigrammePublie {
+  version: { id: string; libelle: string; publie_le?: string | null } | null;
+  noeuds: OrgNoeud[];
+  liens: OrgLien[];
+}
+export function getOrganigrammePublie(): Promise<OrganigrammePublie> {
+  return request(`/api/v1/organigramme/publie`, { method: "GET" }, "Organigramme indisponible");
+}
+
 // Activity attachments (images and files), shared with the back office.
 export interface PieceEvenement {
   id: string;
