@@ -346,6 +346,22 @@ select {
 
 .section { margin-top: 20px; }
 .section h2, .section h3 { font-family: var(--adsum-font-display); margin: 0 0 10px; color: var(--adsum-ink); }
+.pref-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 12px 0;
+  border-top: 1px solid var(--adsum-line);
+}
+.pref-row:first-of-type { border-top: none; }
+.pref-choix { display: flex; gap: 6px; flex-wrap: wrap; }
+.pref-choix .btn.is-on {
+  border-color: var(--adsum-acc);
+  color: var(--adsum-acc);
+  font-weight: 600;
+}
 
 /* Notifications */
 .notif-list { list-style: none; padding: 0; margin: 16px 0 0; display: flex; flex-direction: column; gap: 8px; }

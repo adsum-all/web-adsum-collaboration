@@ -158,6 +158,16 @@ export function getMoi(): Promise<Membre> {
   });
 }
 
+// Display preferences: reuse the member-level endpoints (permission membres.self, held by
+// every collaboration user). They persist the choice server-side so it follows the member
+// across all apps; the theme is also applied and cached locally for instant effect.
+export function setThemePref(theme: "light" | "dark" | "system"): Promise<void> {
+  return request(`/api/v1/membres/me/theme`, { method: "PUT", body: jbody({ theme }) }, "Changement de thème impossible").then(() => undefined);
+}
+export function setLanguePref(langue: "fr" | "en"): Promise<void> {
+  return request(`/api/v1/membres/me/langue`, { method: "PUT", body: jbody({ langue }) }, "Changement de langue impossible").then(() => undefined);
+}
+
 // Notifications
 export function listNotifications(): Promise<Notification[]> {
   return request(`${B}/notifications`, { method: "GET" }, "Notifications indisponibles");
@@ -374,6 +384,16 @@ export async function chargerPermissions(): Promise<void> {
 }
 export function peutGererActivites(): boolean {
   return (_permissions ?? []).includes("collaboration.gerer");
+}
+// The Informations page (ported from the back-office) is gated by the read permission,
+// same as the back-office menu; the API still enforces informations.gerer on mutations.
+export function peutConsulterInformations(): boolean {
+  return (_permissions ?? []).includes("informations.consulter");
+}
+// The custom board-template builder is gated by a dedicated permission granted via a
+// governance group, so only that special role sees and uses the page.
+export function peutCreerModeles(): boolean {
+  return (_permissions ?? []).includes("collaboration.modeles");
 }
 
 // Any collaboration write (create/edit a board, a card, a comment, a checklist, a

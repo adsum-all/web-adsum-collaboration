@@ -232,6 +232,11 @@ h3 {
   padding: 0;
   font-family: inherit;
 }
+/* Sidebar footer sits on the dark navy: the profile name used --adsum-ink (near-black) and
+   was invisible. Scope readable sidebar tokens to the footer only. link-strong (the name) is
+   declared after .link so the brighter --sidebar-ink wins on the element that carries both. */
+.sidebar-foot .link { color: var(--sidebar-mut); }
+.sidebar-foot .link-strong { color: var(--sidebar-ink); }
 
 /* Main + top bar */
 .main {
