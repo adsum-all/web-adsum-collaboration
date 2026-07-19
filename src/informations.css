@@ -89,6 +89,7 @@
   display: flex; align-items: center; gap: 12px; padding: 12px 14px;
   border: 1px solid var(--adsum-line); border-radius: 12px; background: var(--adsum-panel);
   cursor: pointer; transition: border-color 0.12s ease, box-shadow 0.12s ease;
+  width: 100%; text-align: left; font: inherit; color: inherit;
 }
 .info-row:hover { border-color: var(--adsum-acc); box-shadow: 0 4px 14px -8px rgba(20,30,60,.25); }
 .info-row-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }

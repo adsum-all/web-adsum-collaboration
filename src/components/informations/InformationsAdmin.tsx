@@ -62,24 +62,29 @@ export function InformationsAdmin({ token }: Readonly<{ token: string }>): JSX.E
 
       {liste.loading ? (
         <p className="muted">Chargement...</p>
+      ) : liste.error ? (
+        <div className="banner banner-error" role="alert">
+          {liste.error}
+          <button type="button" className="link" onClick={reload} style={{ marginLeft: 12 }}>Réessayer</button>
+        </div>
       ) : items.length === 0 ? (
         <div className="empty-card"><p>Aucune information pour ce filtre.</p></div>
       ) : (
-        <ul className="info-list">
+        <div className="info-list">
           {items.map((i) => {
             const m = prioMeta(i.priorite);
             return (
-              <li key={i.id} className="info-row" onClick={() => setEditing(i)}>
+              <button key={i.id} type="button" className="info-row" onClick={() => setEditing(i)}>
                 <span className={`info-badge ${m.cls}`}>{m.label}</span>
                 <div className="info-row-main">
                   <strong>{i.titre}</strong>
                   <span className="muted small">{[i.auteur, STATUT_LABEL[i.statut], i.envoye_le ? new Date(i.envoye_le).toLocaleString("fr-FR") : new Date(i.cree_le ?? "").toLocaleDateString("fr-FR")].filter(Boolean).join(" · ")}</span>
                 </div>
                 <span className={`info-statut info-statut-${i.statut}`}>{STATUT_LABEL[i.statut]}</span>
-              </li>
+              </button>
             );
           })}
-        </ul>
+        </div>
       )}
 
       {editing && (

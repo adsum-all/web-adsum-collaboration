@@ -14,6 +14,7 @@ export function GlobalSearch({ onClose, onOuvrirEspace, onOuvrirTableau, onOuvri
   const [q, setQ] = useState(initialQuery);
   const [resultats, setResultats] = useState<ResultatRecherche[]>([]);
   const [cursor, setCursor] = useState(0);
+  const [erreur, setErreur] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -23,12 +24,11 @@ export function GlobalSearch({ onClose, onOuvrirEspace, onOuvrirTableau, onOuvri
 
   useEffect(() => {
     let cancel = false;
-    void rechercher(q).then((rows) => {
-      if (!cancel) {
-        setResultats(rows);
-        setCursor(0);
-      }
-    });
+    rechercher(q)
+      .then((rows) => {
+        if (!cancel) { setResultats(rows); setCursor(0); setErreur(null); }
+      })
+      .catch((e) => { if (!cancel) setErreur(e instanceof Error ? e.message : "Recherche indisponible"); });
     return () => {
       cancel = true;
     };
@@ -87,7 +87,10 @@ export function GlobalSearch({ onClose, onOuvrirEspace, onOuvrirTableau, onOuvri
               Tapez pour rechercher. ↑↓ pour naviguer, Entrée pour ouvrir.
             </p>
           )}
-          {q.trim() !== "" && resultats.length === 0 && (
+          {erreur && (
+            <p className="banner banner-error" role="alert" style={{ margin: 12 }}>{erreur}</p>
+          )}
+          {!erreur && q.trim() !== "" && resultats.length === 0 && (
             <p className="muted small" style={{ padding: 12 }}>Aucun résultat.</p>
           )}
           {(["espace", "tableau", "carte"] as const).map((kind) => {

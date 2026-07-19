@@ -28,6 +28,12 @@ export function TabMembres({ espace, membres, moiId, onChanged }: Props): JSX.El
   // on a previewed viewAs role, so a supervise-only account never sees a 403 button.
   const roleReel = roleDansEspace(espace, moiId);
   const peutGerer = peutEcrireCollaboration() && peut(espace, roleReel, "gerer_membres");
+  const [erreur, setErreur] = useState<string | null>(null);
+  // Every membership mutation goes through this: a failure (403, conflict such as the
+  // last-owner guard) surfaces a message instead of silently looking successful.
+  function run(p: Promise<unknown>): Promise<void> {
+    return p.then(() => { setErreur(null); onChanged(); }).catch((e) => setErreur(e instanceof Error ? e.message : "Action impossible"));
+  }
 
   const dansEspace = new Set(espace.membres.map((m) => m.membre_id));
   const candidats = useMemo(
@@ -66,6 +72,12 @@ export function TabMembres({ espace, membres, moiId, onChanged }: Props): JSX.El
 
   return (
     <div>
+      {erreur && (
+        <div className="banner banner-error" role="alert" style={{ marginBottom: 10 }}>
+          {erreur}
+          <button type="button" className="link" onClick={() => setErreur(null)} style={{ marginLeft: 12 }}>Fermer</button>
+        </div>
+      )}
       <section className="card">
         <h2 className="card-title">Membres de l'espace</h2>
         <ul className="mini-list">
@@ -82,7 +94,7 @@ export function TabMembres({ espace, membres, moiId, onChanged }: Props): JSX.El
                     <select
                       value={m.role}
                       onChange={(e) => {
-                        void changeRoleMembre(espace.id, m.membre_id, e.target.value as RoleEspace).then(onChanged);
+                        void run(changeRoleMembre(espace.id, m.membre_id, e.target.value as RoleEspace));
                       }}
                     >
                       {ROLES.map((r) => (
@@ -100,7 +112,7 @@ export function TabMembres({ espace, membres, moiId, onChanged }: Props): JSX.El
                       className="btn btn-ghost btn-inline"
                       onClick={() => {
                         if (window.confirm(`Retirer ${nomMembre(m.membre_id)} de l'espace ?`)) {
-                          void removeMembreEspace(espace.id, m.membre_id).then(onChanged);
+                          void run(removeMembreEspace(espace.id, m.membre_id));
                         }
                       }}
                     >
@@ -136,10 +148,7 @@ export function TabMembres({ espace, membres, moiId, onChanged }: Props): JSX.El
                   type="button"
                   className="btn btn-primary btn-inline"
                   onClick={() => {
-                    void addMembreEspace(espace.id, c.id, "membre").then(() => {
-                      setRecherche("");
-                      onChanged();
-                    });
+                    void run(addMembreEspace(espace.id, c.id, "membre")).then(() => setRecherche(""));
                   }}
                 >
                   Ajouter comme membre
@@ -174,14 +183,14 @@ export function TabMembres({ espace, membres, moiId, onChanged }: Props): JSX.El
                     <button
                       type="button"
                       className="btn btn-primary btn-inline"
-                      onClick={() => void accepterDemande(espace.id, d.id).then(onChanged)}
+                      onClick={() => void run(accepterDemande(espace.id, d.id))}
                     >
                       Accepter
                     </button>
                     <button
                       type="button"
                       className="btn btn-ghost btn-inline"
-                      onClick={() => void refuserDemande(espace.id, d.id).then(onChanged)}
+                      onClick={() => void run(refuserDemande(espace.id, d.id))}
                     >
                       Refuser
                     </button>

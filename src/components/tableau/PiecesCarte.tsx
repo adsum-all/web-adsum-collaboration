@@ -98,7 +98,7 @@ export function PiecesCarte({ carte, peutEditer, onChanged }: Props): JSX.Elemen
         onDragLeave={() => setDrag(false)}
         onDrop={(e) => { if (peutEditer) { e.preventDefault(); setDrag(false); void envoyer(e.dataTransfer.files); } }}
         style={{
-          border: `1px dashed ${drag ? "var(--accent, #0EA5E9)" : "var(--border, #d8dee9)"}`,
+          border: `1px dashed ${drag ? "var(--adsum-acc, #0EA5E9)" : "var(--adsum-line, #d8dee9)"}`,
           borderRadius: 10, padding: 10, background: drag ? "rgba(14,165,233,0.06)" : "transparent",
         }}
       >
@@ -113,7 +113,7 @@ export function PiecesCarte({ carte, peutEditer, onChanged }: Props): JSX.Elemen
                   <button type="button" onClick={() => setApercu(p)} title="Aperçu"
                     style={{ padding: 0, border: "none", background: "transparent", cursor: "pointer" }}>
                     <img src={p.data_url ?? ""} alt={p.nom}
-                      style={{ maxWidth: 160, maxHeight: 110, borderRadius: 8, objectFit: "cover", border: isCover ? "2px solid var(--accent, #0EA5E9)" : "1px solid var(--border, #d8dee9)" }} />
+                      style={{ maxWidth: 160, maxHeight: 110, borderRadius: 8, objectFit: "cover", border: isCover ? "2px solid var(--adsum-acc, #0EA5E9)" : "1px solid var(--adsum-line, #d8dee9)" }} />
                   </button>
                 ) : (
                   <button type="button" onClick={() => setApercu(p)} className="btn btn-ghost btn-inline"
