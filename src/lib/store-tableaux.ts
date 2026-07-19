@@ -20,39 +20,37 @@ export interface ModeleCatalogue {
   colonnes: ModeleColonne[];
 }
 
-// Merged catalogue: the built-in templates, plus (when a space is given) the custom
-// templates usable in that workspace, appended after the built-in ones.
-export function listModelesCatalogue(espaceId?: string): Promise<ModeleCatalogue[]> {
-  const q = espaceId ? `?espace_id=${encodeURIComponent(espaceId)}` : "";
-  return request(`${B}/modeles-catalogue${q}`, { method: "GET" }, "Modèles indisponibles");
+// Merged catalogue: the built-in templates plus the GLOBAL custom-template library
+// (shared templates + the caller's private ones), the same in every workspace.
+export function listModelesCatalogue(): Promise<ModeleCatalogue[]> {
+  return request(`${B}/modeles-catalogue`, { method: "GET" }, "Modèles indisponibles");
 }
 
-// Custom board templates a team builds and manages (gated by collaboration.modeles).
+// Custom board templates: a global library asset, not tied to a workspace. Building or
+// managing one is gated by collaboration.modeles; anyone can reuse a shared one.
 export interface ModelePerso {
   id: string;
-  espace_id: string;
   libelle: string;
   description: string;
-  visibilite: "espace" | "prive";
+  visibilite: "partage" | "prive";
   cree_par: string | null;
   source: "personnalise";
   colonnes: ModeleColonne[];
 }
 export interface ModelePersoInput {
-  espace_id: string;
   nom: string;
   description?: string;
-  visibilite?: "espace" | "prive";
+  visibilite?: "partage" | "prive";
   colonnes: ModeleColonne[];
 }
 
-export function listModelesPerso(espaceId: string): Promise<ModelePerso[]> {
-  return request(`${B}/modeles-perso?espace_id=${encodeURIComponent(espaceId)}`, { method: "GET" }, "Modèles indisponibles");
+export function listModelesPerso(): Promise<ModelePerso[]> {
+  return request(`${B}/modeles-perso`, { method: "GET" }, "Modèles indisponibles");
 }
 export function createModelePerso(input: ModelePersoInput): Promise<ModelePerso> {
   return request(`${B}/modeles-perso`, { method: "POST", body: jbody(input) }, "Modèle non créé");
 }
-export function updateModelePerso(id: string, patch: Partial<Omit<ModelePersoInput, "espace_id">>): Promise<ModelePerso> {
+export function updateModelePerso(id: string, patch: Partial<ModelePersoInput>): Promise<ModelePerso> {
   return request(`${B}/modeles-perso/${id}`, { method: "PATCH", body: jbody(patch) }, "Modèle non mis à jour");
 }
 export function deleteModelePerso(id: string): Promise<void> {
