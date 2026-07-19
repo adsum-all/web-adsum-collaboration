@@ -8,6 +8,7 @@ import { RaccourcisModal } from "./components/common/RaccourcisModal.js";
 import { CalendrierPage } from "./components/calendrier/CalendrierPage.js";
 import { OrganigrammeView } from "./components/organigramme/OrganigrammeView.js";
 import { CanalPage } from "./components/canal/CanalPage.js";
+import { CorbeillePage } from "./components/corbeille/CorbeillePage.js";
 import { NotificationsPage } from "./components/notifications/NotificationsPage.js";
 import { ProfilPage } from "./components/profil/ProfilPage.js";
 import { Home } from "./components/home/Home.js";
@@ -31,6 +32,10 @@ export function App(): JSX.Element {
   const [searchQ, setSearchQ] = useState("");
   const [helpOpen, setHelpOpen] = useState(false);
   const [me, setMe] = useState<Membre | null>(null);
+  // True when the session is valid but the current member/permissions could not be
+  // resolved: the app must not silently render read-only with an empty moiId (which
+  // looks broken), it shows a clear reconnect banner instead.
+  const [profilEchoue, setProfilEchoue] = useState(false);
   const [rejoindreMsg, setRejoindreMsg] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState<boolean>(() => {
     try { return localStorage.getItem("adsum.collab.sidebar.collapsed") === "1"; } catch { return false; }
@@ -85,7 +90,8 @@ export function App(): JSX.Element {
     void initStore(session).then((m) => {
       if (!alive) return;
       setMe(m);
-      reloadEspaces();
+      setProfilEchoue(m === null);
+      if (m) reloadEspaces();
     });
     return () => {
       alive = false;
@@ -173,6 +179,18 @@ export function App(): JSX.Element {
     return <Login onAuth={onAuth} />;
   }
 
+  if (profilEchoue) {
+    return (
+      <div className="auth">
+        <div className="empty-state">
+          <h2>Profil indisponible</h2>
+          <p>Votre profil de collaboration n'a pas pu être chargé. Reconnectez-vous pour rétablir votre session.</p>
+          <button type="button" className="btn btn-primary" onClick={onQuitter}>Se reconnecter</button>
+        </div>
+      </div>
+    );
+  }
+
   const targetEspaceId =
     route.kind === "espace" ? route.id : route.kind === "tableau" ? route.espaceId : null;
   const espaceCourant =
@@ -180,8 +198,11 @@ export function App(): JSX.Element {
       ? espaces.find((e) => e.id === targetEspaceId)
         ?? (fetchedEspace && fetchedEspace.id === targetEspaceId ? fetchedEspace : null)
       : null) ?? null;
-  // A sub-space is being fetched: show a loading state, not "access refused".
-  const espaceEnChargement = !!targetEspaceId && !espaceCourant && fetchEspaceState === "loading";
+  // A targeted space that is not yet resolved shows a loading state until the on-demand
+  // fetch actually FAILS (state 'error'): the transient 'idle' between navigation and the
+  // fetch effect must not flash "access refused". Only a real error (not a member, or the
+  // space is gone) falls through to the access-refused message.
+  const espaceEnChargement = !!targetEspaceId && !espaceCourant && fetchEspaceState !== "error";
   // Parent workspace of the current sub-space (top-level, so it is in the list),
   // for the breadcrumb that tells the user exactly where they are.
   const parentEspace = espaceCourant?.parent_id
@@ -244,6 +265,9 @@ export function App(): JSX.Element {
           )}
           {route.kind === "notifications" && (
             <NotificationsPage onOuvrirEspace={(id) => setRoute({ kind: "espace", id })} />
+          )}
+          {route.kind === "corbeille" && (
+            <CorbeillePage onOuvrirEspace={(id) => setRoute({ kind: "espace", id })} />
           )}
           {route.kind === "profil" && (
             <ProfilPage />
@@ -308,6 +332,8 @@ function crumbFor(route: Route, espace: Espace | null): { crumb: string; title: 
       return { crumb: "COLLABORATION", title: "Canal d'instructions" };
     case "notifications":
       return { crumb: "PERSONNEL", title: "Notifications" };
+    case "corbeille":
+      return { crumb: "COLLABORATION", title: "Corbeille et archives" };
     case "profil":
       return { crumb: "PERSONNEL", title: "Mon profil" };
     case "espace":

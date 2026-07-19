@@ -7,6 +7,7 @@ export type Route =
   | { kind: "organigramme" }
   | { kind: "canal" }
   | { kind: "notifications" }
+  | { kind: "corbeille" }
   | { kind: "profil" }
   | { kind: "espace"; id: string }
   | { kind: "tableau"; espaceId: string; id: string; carteId?: string };
@@ -41,6 +42,7 @@ const ICONS = {
   canal: <path d="M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3zM5 11a7 7 0 0 0 14 0M12 18v3" />,
   notifications: <path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6M10 20a2 2 0 0 0 4 0" />,
   organigramme: <path d="M9 3h6v4H9zM3 17h6v4H3zM15 17h6v4h-6zM12 7v4M12 11H6v6M12 11h6v6" />,
+  corbeille: <path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6" />,
 };
 
 function svg(node: JSX.Element): JSX.Element {
@@ -66,6 +68,7 @@ export function Sidebar({
     { key: "calendrier", label: "Calendrier", route: { kind: "calendrier" }, icon: svg(ICONS.calendrier) },
     { key: "organigramme", label: "Organigramme", route: { kind: "organigramme" }, icon: svg(ICONS.organigramme) },
     { key: "notifications", label: "Notifications", route: { kind: "notifications" }, icon: svg(ICONS.notifications), badge: nbNotifsNonLues },
+    { key: "corbeille", label: "Corbeille et archives", route: { kind: "corbeille" }, icon: svg(ICONS.corbeille) },
   ];
   return (
     <aside className="sidebar" aria-label="Menu latéral">

@@ -10,8 +10,14 @@ interface Props {
 
 export function NotificationsPage({ onOuvrirEspace }: Props): JSX.Element {
   const [notifs, setNotifs] = useState<Notification[]>([]);
+  const [etat, setEtat] = useState<"loading" | "ok" | "error">("loading");
 
-  const reload = (): void => { void listNotifications().then(setNotifs); };
+  const reload = (): void => {
+    void listNotifications()
+      .then((n) => { setNotifs(n); setEtat("ok"); })
+      // A rejected fetch used to leave a silent empty page; show a distinct error state.
+      .catch(() => setEtat("error"));
+  };
   useEffect(reload, []);
 
   const nonLues = notifs.filter((n) => !n.lue);
@@ -32,7 +38,12 @@ export function NotificationsPage({ onOuvrirEspace }: Props): JSX.Element {
         </div>
       </header>
 
-      {notifs.length === 0 && (
+      {etat === "loading" && <p className="muted">Chargement...</p>}
+      {etat === "error" && (
+        <EmptyState titre="Chargement impossible" description="Impossible de charger vos notifications."
+          action={<button type="button" className="btn btn-primary" onClick={reload}>Réessayer</button>} />
+      )}
+      {etat === "ok" && notifs.length === 0 && (
         <EmptyState titre="Aucune notification" description="Vous serez notifié lors des mentions, assignations et échéances." />
       )}
 
