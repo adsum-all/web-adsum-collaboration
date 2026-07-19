@@ -15,6 +15,7 @@ import {
 } from "../../lib/store.js";
 import { PiecesACharger } from "./PiecesACharger.js";
 import { lireFichier } from "./PiecesEvenement.js";
+import { CreneauJour } from "./CreneauJour.js";
 import { type Plan, PlanificationActivite } from "./PlanificationActivite.js";
 import { detectPlatform } from "../../lib/platform.js";
 import { FUSEAUX } from "../../lib/fuseaux.js";
@@ -217,14 +218,7 @@ export function ActiviteFormComplet({ detail, onDone, onCancel }: Props): JSX.El
           <select value={zone} onChange={(e) => setZone(e.target.value)}>{FUSEAUX.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
         </Champ>
         {estEdition && (
-          <>
-            <Champ label="Début * (heure du fuseau ci-dessus)">
-              <input type="datetime-local" value={debut} onChange={(e) => setDebut(e.target.value)} />
-            </Champ>
-            <Champ label="Fin">
-              <input type="datetime-local" value={fin} onChange={(e) => setFin(e.target.value)} />
-            </Champ>
-          </>
+          <CreneauJour debut={debut} fin={fin} onChange={(d, f) => { setDebut(d); setFin(f); }} />
         )}
         <Champ label="Fenêtre de pointage spécifique (h, facultatif)" aide="Laissez vide pour le réglage global (2 h par défaut).">
           <input type="number" min={1} max={336} placeholder="Par défaut : 2 h" value={fenetre} onChange={(e) => setFenetre(e.target.value)} />
