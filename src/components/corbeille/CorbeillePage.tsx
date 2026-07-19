@@ -67,19 +67,20 @@ export function CorbeillePage({ onOuvrirEspace }: Props): JSX.Element {
       <header className="page-head">
         <div>
           <h1>Corbeille et archives</h1>
-          <p className="muted">Retrouvez et restaurez les espaces archivés et les éléments supprimés. La suppression est réversible pendant {c.retention_jours} jour{c.retention_jours > 1 ? "s" : ""} avant purge définitive.</p>
+          <p className="muted">Deux notions distinctes réunies ici. <b>Archiver</b> range un espace hors de la liste active sans jamais le supprimer : il reste conservé et se réactive à tout moment. <b>Supprimer</b> place l'espace ou le tableau à la corbeille, récupérable pendant {c.retention_jours} jour{c.retention_jours > 1 ? "s" : ""} (délai réglé au back-office) avant la purge définitive. Les tableaux archivés d'un espace restent, eux, dans les réglages de cet espace.</p>
         </div>
       </header>
 
       {erreur && <p className="banner banner-error">{erreur}</p>}
 
       {rien && (
-        <EmptyState titre="Rien à récupérer" description="Aucun espace archivé et aucun élément dans la corbeille." />
+        <EmptyState titre="Rien à récupérer" description="Aucun espace archivé et aucun élément à la corbeille." />
       )}
 
       {archives.length > 0 && (
         <section className="card">
           <h2 className="card-titre">Espaces archivés<span className="corbeille-compte">{archives.length}</span></h2>
+          <p className="muted small" style={{ margin: "-6px 0 12px" }}>Rangés hors de la liste active, jamais supprimés. Réactivez-les d'un clic.</p>
           <ul className="corbeille-liste">
             {archives.map((e) => (
               <li key={e.id} className="corbeille-item">
@@ -104,6 +105,7 @@ export function CorbeillePage({ onOuvrirEspace }: Props): JSX.Element {
       {(c.espaces.length > 0 || c.tableaux.length > 0) && (
         <section className="card">
           <h2 className="card-titre">Corbeille<span className="corbeille-compte">{c.espaces.length + c.tableaux.length}</span></h2>
+          <p className="muted small" style={{ margin: "-6px 0 12px" }}>Éléments supprimés, récupérables jusqu'à leur purge définitive. Passé le délai, ils sont effacés.</p>
           <ul className="corbeille-liste">
             {c.espaces.map((e) => (
               <li key={`e-${e.id}`} className="corbeille-item">
