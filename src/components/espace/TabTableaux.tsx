@@ -46,8 +46,10 @@ export function TabTableaux({ espace, moiId, onOuvrir }: Props): JSX.Element {
   }, [espace.id]);
 
   useEffect(() => {
-    void listModelesCatalogue().then(setCatalogue).catch(() => undefined);
-  }, []);
+    // Pass the space id so the picker also offers this workspace custom templates,
+    // not only the built-in catalogue.
+    void listModelesCatalogue(espace.id).then(setCatalogue).catch(() => undefined);
+  }, [espace.id]);
 
   async function creer(): Promise<void> {
     if (!nom.trim()) return;

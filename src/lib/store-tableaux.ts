@@ -16,11 +16,47 @@ export interface ModeleCatalogue {
   id: string;
   libelle: string;
   description: string;
+  source?: "systeme" | "personnalise";
   colonnes: ModeleColonne[];
 }
 
-export function listModelesCatalogue(): Promise<ModeleCatalogue[]> {
-  return request(`${B}/modeles-catalogue`, { method: "GET" }, "Modèles indisponibles");
+// Merged catalogue: the built-in templates, plus (when a space is given) the custom
+// templates usable in that workspace, appended after the built-in ones.
+export function listModelesCatalogue(espaceId?: string): Promise<ModeleCatalogue[]> {
+  const q = espaceId ? `?espace_id=${encodeURIComponent(espaceId)}` : "";
+  return request(`${B}/modeles-catalogue${q}`, { method: "GET" }, "Modèles indisponibles");
+}
+
+// Custom board templates a team builds and manages (gated by collaboration.modeles).
+export interface ModelePerso {
+  id: string;
+  espace_id: string;
+  libelle: string;
+  description: string;
+  visibilite: "espace" | "prive";
+  cree_par: string | null;
+  source: "personnalise";
+  colonnes: ModeleColonne[];
+}
+export interface ModelePersoInput {
+  espace_id: string;
+  nom: string;
+  description?: string;
+  visibilite?: "espace" | "prive";
+  colonnes: ModeleColonne[];
+}
+
+export function listModelesPerso(espaceId: string): Promise<ModelePerso[]> {
+  return request(`${B}/modeles-perso?espace_id=${encodeURIComponent(espaceId)}`, { method: "GET" }, "Modèles indisponibles");
+}
+export function createModelePerso(input: ModelePersoInput): Promise<ModelePerso> {
+  return request(`${B}/modeles-perso`, { method: "POST", body: jbody(input) }, "Modèle non créé");
+}
+export function updateModelePerso(id: string, patch: Partial<Omit<ModelePersoInput, "espace_id">>): Promise<ModelePerso> {
+  return request(`${B}/modeles-perso/${id}`, { method: "PATCH", body: jbody(patch) }, "Modèle non mis à jour");
+}
+export function deleteModelePerso(id: string): Promise<void> {
+  return request(`${B}/modeles-perso/${id}`, { method: "DELETE" }, "Modèle non supprimé");
 }
 
 export function listTableauxEspace(espaceId: string): Promise<TableauProto[]> {
