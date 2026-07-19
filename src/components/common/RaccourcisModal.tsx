@@ -7,7 +7,6 @@ const RACCOURCIS: Array<{ touche: string; description: string }> = [
   { touche: "/", description: "Focus barre de recherche" },
   { touche: "?", description: "Afficher cette aide" },
   { touche: "Esc", description: "Fermer une fenêtre" },
-  { touche: "N", description: "Nouvelle carte (dans un tableau)" },
   { touche: "↑ ↓ Entrée", description: "Naviguer dans les résultats" },
 ];
 

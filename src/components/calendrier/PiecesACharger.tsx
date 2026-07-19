@@ -51,10 +51,10 @@ export function PiecesACharger({ files, onChange }: { files: File[]; onChange: (
         role="button"
         tabIndex={0}
         style={{
-          border: `2px dashed ${survol ? "var(--accent, #2a4fad)" : "var(--border, #d7dbe2)"}`,
+          border: `2px dashed ${survol ? "var(--adsum-acc, #2a4fad)" : "var(--adsum-line, #d7dbe2)"}`,
           background: survol ? "rgba(42,79,173,0.06)" : "transparent",
           borderRadius: 10, padding: "12px 14px", textAlign: "center", cursor: "pointer", fontSize: 13,
-          color: "var(--muted, #5b6472)",
+          color: "var(--adsum-mut, #5b6472)",
         }}
       >
         Glissez-déposez, collez (Ctrl+V) ou cliquez pour joindre une image ou un document

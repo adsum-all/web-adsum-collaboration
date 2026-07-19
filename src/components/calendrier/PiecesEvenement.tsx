@@ -78,7 +78,7 @@ export function PiecesEvenement({ activiteId, peutGerer }: Props): JSX.Element {
           <div key={p.id} style={{ display: "flex", flexDirection: "column", gap: 4, maxWidth: 160 }}>
             {p.type.startsWith("image/") ? (
               <a href={p.url} target="_blank" rel="noopener noreferrer">
-                <img src={p.url} alt={p.nom} style={{ maxWidth: 150, maxHeight: 110, borderRadius: 8, objectFit: "cover", border: "1px solid var(--border, #e2e2e2)" }} />
+                <img src={p.url} alt={p.nom} style={{ maxWidth: 150, maxHeight: 110, borderRadius: 8, objectFit: "cover", border: "1px solid var(--adsum-line, #e2e2e2)" }} />
               </a>
             ) : (
               <a href={p.url} download={p.nom} style={{ fontSize: 13, wordBreak: "break-all" }}>📎 {p.nom}</a>
@@ -99,10 +99,10 @@ export function PiecesEvenement({ activiteId, peutGerer }: Props): JSX.Element {
           role="button"
           tabIndex={0}
           style={{
-            border: `2px dashed ${survol ? "var(--accent, #2a4fad)" : "var(--border, #d7dbe2)"}`,
+            border: `2px dashed ${survol ? "var(--adsum-acc, #2a4fad)" : "var(--adsum-line, #d7dbe2)"}`,
             background: survol ? "rgba(42,79,173,0.06)" : "transparent",
             borderRadius: 10, padding: "12px 14px", textAlign: "center", cursor: "pointer", fontSize: 13,
-            color: "var(--muted, #5b6472)",
+            color: "var(--adsum-mut, #5b6472)",
           }}
         >
           {busy ? "Ajout en cours..." : "Glissez-déposez, collez (Ctrl+V) ou cliquez pour ajouter une image ou un document"}

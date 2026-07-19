@@ -32,7 +32,7 @@ export function EspacePage({ espace, parent, moiId, onChanged, onOuvrirEspace, o
   const [errSous, setErrSous] = useState<string | null>(null);
 
   useEffect(() => {
-    void listMembres().then(setMembres);
+    void listMembres().then(setMembres).catch(() => undefined);
   }, []);
 
   const roleReel = roleDansEspace(espace, moiId);

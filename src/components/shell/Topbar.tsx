@@ -1,13 +1,12 @@
 interface TopbarProps {
   crumb: string;
   title: string;
-  onSearch?: (q: string) => void;
   onOpenSearch?: () => void;
   onOpenMenu?: () => void;
   right?: JSX.Element;
 }
 
-export function Topbar({ crumb, title, onSearch, onOpenSearch, onOpenMenu, right }: TopbarProps): JSX.Element {
+export function Topbar({ crumb, title, onOpenSearch, onOpenMenu, right }: Readonly<TopbarProps>): JSX.Element {
   return (
     <header className="topbar-app">
       {onOpenMenu && (
@@ -31,7 +30,6 @@ export function Topbar({ crumb, title, onSearch, onOpenSearch, onOpenMenu, right
         <span className="search-placeholder">Rechercher un espace, un tableau, une carte</span>
         <kbd className="kbd kbd-sm">Ctrl K</kbd>
       </button>
-      {onSearch ? <span hidden aria-hidden="true">{/* onSearch reserved */}</span> : null}
       {right}
     </header>
   );

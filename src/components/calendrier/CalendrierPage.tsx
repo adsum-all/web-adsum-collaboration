@@ -29,15 +29,30 @@ export function CalendrierPage({ scopeEspaceId = null, onOuvrirCarte }: Props): 
   const [filtrePriorite, setFiltrePriorite] = useState<Priorite | "toutes">("toutes");
   const [showForm, setShowForm] = useState(false);
   const [activiteOuverte, setActiviteOuverte] = useState<string | null>(null);
+  const [chargement, setChargement] = useState(true);
+  const [erreur, setErreur] = useState<string | null>(null);
 
   const rechargerActivites = (): void => {
-    void listActivitesPubliees().then(setActivites);
+    void listActivitesPubliees().then(setActivites).catch(() => undefined);
   };
 
+  async function charger(): Promise<void> {
+    setChargement(true);
+    try {
+      const [c, a, e] = await Promise.all([listCartesAvecEcheance(), listActivitesPubliees(), listEspaces()]);
+      setCartes(c);
+      setActivites(a);
+      setEspaces(e);
+      setErreur(null);
+    } catch (err) {
+      setErreur(err instanceof Error ? err.message : "Calendrier indisponible");
+    } finally {
+      setChargement(false);
+    }
+  }
+
   useEffect(() => {
-    void listCartesAvecEcheance().then(setCartes);
-    void listActivitesPubliees().then(setActivites);
-    void listEspaces().then(setEspaces);
+    void charger();
   }, []);
 
   const etiquettes = useMemo(() => {
@@ -95,6 +110,14 @@ export function CalendrierPage({ scopeEspaceId = null, onOuvrirCarte }: Props): 
         <p className="muted">Toutes les activités programmées (même source que le back office et l'agenda des membres), plus les échéances de vos cartes.</p>
       </header>
 
+      {erreur && (
+        <div className="banner banner-error" role="alert">
+          {erreur}
+          <button type="button" className="link" onClick={() => void charger()} style={{ marginLeft: 12 }}>Réessayer</button>
+        </div>
+      )}
+      {chargement && <p className="muted">Chargement du calendrier…</p>}
+
       <div className="cal-toolbar">
         <div className="cal-nav">
           <button type="button" className="btn btn-ghost btn-inline" onClick={() => nav(-1)} aria-label="Mois précédent">‹</button>
@@ -139,7 +162,7 @@ export function CalendrierPage({ scopeEspaceId = null, onOuvrirCarte }: Props): 
         <div className="modal-overlay" role="dialog" aria-modal="true" onClick={() => setShowForm(false)}
           style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50 }}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}
-            style={{ background: "var(--bg, #fff)", color: "var(--fg, #111)", borderRadius: 12, padding: 20, width: "min(680px, 94vw)", maxHeight: "90vh", overflow: "auto" }}>
+            style={{ background: "var(--adsum-panel, #fff)", color: "var(--adsum-ink, #111)", borderRadius: 12, padding: 20, width: "min(680px, 94vw)", maxHeight: "90vh", overflow: "auto" }}>
             <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
               <h2 style={{ margin: 0, fontSize: 18 }}>Nouvelle activité</h2>
               <button type="button" className="btn btn-ghost btn-inline" onClick={() => setShowForm(false)} aria-label="Fermer">✕</button>

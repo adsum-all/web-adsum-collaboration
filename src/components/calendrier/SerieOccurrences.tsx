@@ -73,7 +73,7 @@ export function SerieOccurrences({ activiteId, debut, fin, zone, estSerie, onCha
   }
 
   return (
-    <div style={{ borderTop: "1px dashed var(--border, #e2e2e2)", marginTop: 12, paddingTop: 12 }}>
+    <div style={{ borderTop: "1px dashed var(--adsum-line, #e2e2e2)", marginTop: 12, paddingTop: 12 }}>
       <span className="muted small" style={{ fontWeight: 600 }}>Répétition et dates de la série</span>
       <p className="muted small" style={{ margin: "4px 0 8px" }}>
         {estSerie

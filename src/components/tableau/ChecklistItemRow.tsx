@@ -56,12 +56,12 @@ export function ChecklistItemRow({ item, carteId, checklistId, membres, peutEdit
       onDrop={(e) => { if (onDropItem) { e.preventDefault(); onDropItem(); } }}
       style={{
         display: "flex", alignItems: "flex-start", gap: 8, padding: "3px 0", flexWrap: "wrap",
-        borderTop: survole ? "2px solid var(--accent, #0EA5E9)" : "2px solid transparent",
+        borderTop: survole ? "2px solid var(--adsum-acc, #0EA5E9)" : "2px solid transparent",
       }}
     >
       {peutEditer && onDragStartItem && (
         <span draggable title="Déplacer" onDragStart={onDragStartItem}
-          style={{ cursor: "grab", color: "var(--muted, #9aa4b2)", padding: "0 2px", userSelect: "none", lineHeight: "20px" }}>≡</span>
+          style={{ cursor: "grab", color: "var(--adsum-mut, #9aa4b2)", padding: "0 2px", userSelect: "none", lineHeight: "20px" }}>≡</span>
       )}
       <label className="switch-row" style={{ flex: "1 1 55%", minWidth: 0, alignItems: "flex-start" }}>
         <input type="checkbox" checked={item.fait} disabled={!peutEditer || busy}

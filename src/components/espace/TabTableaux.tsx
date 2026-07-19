@@ -22,6 +22,7 @@ interface Props {
 export function TabTableaux({ espace, moiId, onOuvrir }: Props): JSX.Element {
   const [tableaux, setTableaux] = useState<TableauProto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [erreur, setErreur] = useState<string | null>(null);
   const [creation, setCreation] = useState(false);
   const [nom, setNom] = useState("");
   const [description, setDescription] = useState("");
@@ -41,9 +42,15 @@ export function TabTableaux({ espace, moiId, onOuvrir }: Props): JSX.Element {
 
   async function reload(): Promise<void> {
     setLoading(true);
-    const rows = await listTableauxEspace(espace.id);
-    setTableaux(rows);
-    setLoading(false);
+    try {
+      const rows = await listTableauxEspace(espace.id);
+      setTableaux(rows);
+      setErreur(null);
+    } catch (e) {
+      setErreur(e instanceof Error ? e.message : "Tableaux indisponibles");
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
@@ -72,6 +79,12 @@ export function TabTableaux({ espace, moiId, onOuvrir }: Props): JSX.Element {
   }
 
   if (loading) return <p className="muted">Chargement des tableaux...</p>;
+  if (erreur) return (
+    <div className="banner banner-error" role="alert">
+      {erreur}
+      <button type="button" className="link" onClick={() => void reload()} style={{ marginLeft: 12 }}>Réessayer</button>
+    </div>
+  );
 
   return (
     <div>
