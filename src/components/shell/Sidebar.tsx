@@ -4,6 +4,7 @@ export type Route =
   | { kind: "accueil" }
   | { kind: "mes-cartes" }
   | { kind: "calendrier" }
+  | { kind: "organigramme" }
   | { kind: "canal" }
   | { kind: "notifications" }
   | { kind: "profil" }
@@ -39,6 +40,7 @@ const ICONS = {
   calendrier: <path d="M4 6h16v14H4zM4 10h16M8 3v4M16 3v4" />,
   canal: <path d="M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3zM5 11a7 7 0 0 0 14 0M12 18v3" />,
   notifications: <path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6M10 20a2 2 0 0 0 4 0" />,
+  organigramme: <path d="M9 3h6v4H9zM3 17h6v4H3zM15 17h6v4h-6zM12 7v4M12 11H6v6M12 11h6v6" />,
 };
 
 function svg(node: JSX.Element): JSX.Element {
@@ -62,6 +64,7 @@ export function Sidebar({
     { key: "canal", label: "Canal d'instructions", route: { kind: "canal" }, icon: svg(ICONS.canal), badge: nbCanalNouveaux },
     { key: "mes-cartes", label: "Mes cartes", route: { kind: "mes-cartes" }, icon: svg(ICONS.cartes) },
     { key: "calendrier", label: "Calendrier", route: { kind: "calendrier" }, icon: svg(ICONS.calendrier) },
+    { key: "organigramme", label: "Organigramme", route: { kind: "organigramme" }, icon: svg(ICONS.organigramme) },
     { key: "notifications", label: "Notifications", route: { kind: "notifications" }, icon: svg(ICONS.notifications), badge: nbNotifsNonLues },
   ];
   return (
