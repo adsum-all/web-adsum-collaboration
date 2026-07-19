@@ -6,6 +6,7 @@ import { EspacePage } from "./components/espace/EspacePage.js";
 import { EmptyState } from "./components/common/EmptyState.js";
 import { RaccourcisModal } from "./components/common/RaccourcisModal.js";
 import { CalendrierPage } from "./components/calendrier/CalendrierPage.js";
+import { OrganigrammeView } from "./components/organigramme/OrganigrammeView.js";
 import { CanalPage } from "./components/canal/CanalPage.js";
 import { NotificationsPage } from "./components/notifications/NotificationsPage.js";
 import { ProfilPage } from "./components/profil/ProfilPage.js";
@@ -235,6 +236,9 @@ export function App(): JSX.Element {
           {route.kind === "calendrier" && (
             <CalendrierPage onOuvrirCarte={(espaceId, tableauId, carteId) => setRoute({ kind: "tableau", espaceId, id: tableauId, carteId })} />
           )}
+          {route.kind === "organigramme" && (
+            <OrganigrammeView />
+          )}
           {route.kind === "canal" && (
             <CanalPage />
           )}
@@ -298,6 +302,8 @@ function crumbFor(route: Route, espace: Espace | null): { crumb: string; title: 
       return { crumb: "PERSONNEL", title: "Mes cartes" };
     case "calendrier":
       return { crumb: "PERSONNEL", title: "Calendrier" };
+    case "organigramme":
+      return { crumb: "ORGANISATION", title: "Organigramme" };
     case "canal":
       return { crumb: "COLLABORATION", title: "Canal d'instructions" };
     case "notifications":

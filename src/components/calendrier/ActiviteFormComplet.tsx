@@ -15,6 +15,7 @@ import {
 } from "../../lib/store.js";
 import { PiecesACharger } from "./PiecesACharger.js";
 import { lireFichier } from "./PiecesEvenement.js";
+import { type Plan, PlanificationActivite } from "./PlanificationActivite.js";
 import { detectPlatform } from "../../lib/platform.js";
 import { FUSEAUX } from "../../lib/fuseaux.js";
 import { utcToZoned, zonedToUtc } from "../../lib/tz.js";
@@ -70,8 +71,9 @@ export function ActiviteFormComplet({ detail, onDone, onCancel }: Props): JSX.El
   const [liens, setLiens] = useState<string[]>(
     detail?.liens && detail.liens.length > 0 ? detail.liens : detail?.lien_session ? [detail.lien_session] : [""],
   );
-  const [repetition, setRepetition] = useState<"aucune" | "hebdomadaire" | "quotidienne">("aucune");
-  const [nbRepet, setNbRepet] = useState("4");
+  // Scheduling plan (create mode): dates separated from per-day times, exactly like
+  // the back office, so each day becomes a same-day occurrence sharing a serie_id.
+  const [plan, setPlan] = useState<Plan | null>(null);
   const [toucherSerie, setToucherSerie] = useState(false);
   const [principal, setPrincipal] = useState(detail?.intervenant_principal ?? "");
   const [intervenants, setIntervenants] = useState<string[]>(
@@ -106,8 +108,16 @@ export function ActiviteFormComplet({ detail, onDone, onCancel }: Props): JSX.El
           : uniteTable === "tribu" ? (cibles?.tribus ?? []) : [];
 
   async function save(): Promise<void> {
-    if (!titre.trim() || !debut) {
-      setError("Le titre et la date de début sont obligatoires.");
+    if (!titre.trim()) {
+      setError("Le titre est obligatoire.");
+      return;
+    }
+    if (!estEdition && !plan) {
+      setError("Renseignez la planification : au moins une date avec son heure de début et de fin.");
+      return;
+    }
+    if (estEdition && !debut) {
+      setError("La date de début est obligatoire.");
       return;
     }
     if (besoinUnite && !cibleId) {
@@ -122,7 +132,9 @@ export function ActiviteFormComplet({ detail, onDone, onCancel }: Props): JSX.El
       return;
     }
     const cleanLiens = liens.map((l) => l.trim()).filter(Boolean);
-    const debutIso = zonedToUtc(debut, zone);
+    // Create: the planner is the source of truth (same-day debut/fin). Edit keeps
+    // the single date/time of the occurrence being edited.
+    const debutIso = estEdition ? zonedToUtc(debut, zone) : zonedToUtc((plan as Plan).debut, zone);
     const payload: EvenementPayload = {
       titre: titre.trim(),
       volet,
@@ -144,25 +156,21 @@ export function ActiviteFormComplet({ detail, onDone, onCancel }: Props): JSX.El
       intervenant_principal: principal.trim() || null,
       intervenants: intervenants.map((x) => x.trim()).filter(Boolean),
     };
-    if (fin) payload.fin = zonedToUtc(fin, zone);
+    if (estEdition && fin) payload.fin = zonedToUtc(fin, zone);
+    if (!estEdition) payload.fin = zonedToUtc((plan as Plan).fin, zone);
     if (lieu.trim()) payload.lieu = lieu.trim();
     if (cleanLiens.length > 0) {
       payload.liens = cleanLiens;
       payload.lien_session = cleanLiens[0];
     }
-    // Recurrence (create only): repeat weekly or daily N extra times.
-    const n = Number(nbRepet) || 0;
-    if (!estEdition && repetition !== "aucune" && n > 0) {
-      const stepMs = (repetition === "hebdomadaire" ? 7 : 1) * 24 * 3600 * 1000;
-      const base = new Date(debutIso).getTime();
-      const baseFin = fin ? new Date(zonedToUtc(fin, zone)).getTime() : null;
-      const occs = [];
-      for (let i = 1; i <= Math.min(n, 51); i++) {
-        const occ: { debut: string; fin?: string | null } = { debut: new Date(base + i * stepMs).toISOString() };
-        if (baseFin) occ.fin = new Date(baseFin + i * stepMs).toISOString();
-        occs.push(occ);
-      }
-      payload.occurrences = occs;
+    // Create: each planned slot beyond the first becomes a real same-day occurrence
+    // sharing a serie_id, so a multi-day activity gives one pointage per day.
+    if (!estEdition && plan && plan.occurrences.length > 0) {
+      payload.occurrences = plan.occurrences.map((o) => {
+        const occ: { debut: string; fin?: string | null; mode?: string | null } = { debut: zonedToUtc(o.debut, zone), fin: zonedToUtc(o.fin, zone) };
+        if (o.mode && o.mode !== mode) occ.mode = o.mode;
+        return occ;
+      });
     }
     setBusy(true);
     setError(null);
@@ -197,32 +205,29 @@ export function ActiviteFormComplet({ detail, onDone, onCancel }: Props): JSX.El
         <input value={titre} onChange={(e) => setTitre(e.target.value)} style={{ fontSize: 15, padding: "8px 10px" }} />
       </Champ>
 
+      {!estEdition && (
+        <section style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <span style={{ fontSize: 13, fontWeight: 600 }}>Planification (dates et horaires)</span>
+          <PlanificationActivite modeDefaut={mode} onChange={setPlan} />
+        </section>
+      )}
+
       <section style={grid}>
         <Champ label="Fuseau horaire de l'activité *" aide="Par défaut GMT (Côte d'Ivoire). Les heures sont saisies dans ce fuseau ; chaque membre les verra à sa propre heure.">
           <select value={zone} onChange={(e) => setZone(e.target.value)}>{FUSEAUX.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
         </Champ>
-        <Champ label="Début * (heure du fuseau ci-dessus)">
-          <input type="datetime-local" value={debut} onChange={(e) => setDebut(e.target.value)} />
-        </Champ>
-        <Champ label="Fin">
-          <input type="datetime-local" value={fin} onChange={(e) => setFin(e.target.value)} />
-        </Champ>
-        {!estEdition && (
-          <Champ label="Répétition">
-            <select value={repetition} onChange={(e) => setRepetition(e.target.value as typeof repetition)}>
-              <option value="aucune">Aucune (activité unique)</option>
-              <option value="hebdomadaire">Chaque semaine</option>
-              <option value="quotidienne">Chaque jour</option>
-            </select>
-          </Champ>
+        {estEdition && (
+          <>
+            <Champ label="Début * (heure du fuseau ci-dessus)">
+              <input type="datetime-local" value={debut} onChange={(e) => setDebut(e.target.value)} />
+            </Champ>
+            <Champ label="Fin">
+              <input type="datetime-local" value={fin} onChange={(e) => setFin(e.target.value)} />
+            </Champ>
+          </>
         )}
-        {!estEdition && repetition !== "aucune" && (
-          <Champ label="Nombre de répétitions">
-            <input type="number" min={1} max={51} value={nbRepet} onChange={(e) => setNbRepet(e.target.value)} />
-          </Champ>
-        )}
-        <Champ label="Fenêtre de réponse (h après la fin)" aide="Durée pendant laquelle le questionnaire reste ouvert. Vide = réglage global.">
-          <input type="number" min={1} max={336} placeholder="Réglage global" value={fenetre} onChange={(e) => setFenetre(e.target.value)} />
+        <Champ label="Fenêtre de pointage spécifique (h, facultatif)" aide="Laissez vide pour le réglage global (2 h par défaut).">
+          <input type="number" min={1} max={336} placeholder="Par défaut : 2 h" value={fenetre} onChange={(e) => setFenetre(e.target.value)} />
         </Champ>
         <Champ label="Volet">
           <select value={volet} onChange={(e) => setVolet(e.target.value)}><option value="A">A (membres)</option><option value="B">B (grand public)</option></select>
