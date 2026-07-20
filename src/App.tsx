@@ -304,7 +304,9 @@ export function App(): JSX.Element {
             <CalendrierPage onOuvrirCarte={(espaceId, tableauId, carteId) => setRoute({ kind: "tableau", espaceId, id: tableauId, carteId })} />
           )}
           {route.kind === "organigramme" && (
-            <OrganigrammeView />
+            me ? <OrganigrammeView /> : (
+              <div className="page" style={{ padding: 16 }}><p className="muted">Chargement de l'organigramme...</p></div>
+            )
           )}
           {route.kind === "canal" && (
             <CanalPage />
