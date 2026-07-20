@@ -1,102 +1,72 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
-import { type OrgLien, type OrgNoeud, type OrganigrammePublie, getOrganigrammePublie } from "../../lib/store.js";
-
-interface Noeud extends OrgNoeud {
-  enfants: Noeud[];
-}
-
-/** Build the hierarchical tree from the published nodes and hierarchical links. */
-function construireArbre(noeuds: OrgNoeud[], liens: OrgLien[]): Noeud[] {
-  const map = new Map<string, Noeud>();
-  for (const n of noeuds) map.set(n.id, { ...n, enfants: [] });
-  const aParent = new Set<string>();
-  for (const l of liens) {
-    const parent = map.get(l.source_id);
-    const enfant = map.get(l.cible_id);
-    if (parent && enfant) {
-      parent.enfants.push(enfant);
-      aParent.add(enfant.id);
-    }
-  }
-  return [...map.values()].filter((n) => !aParent.has(n.id));
-}
-
-function Carte({ n, niveau }: Readonly<{ n: Noeud; niveau: number }>): JSX.Element {
-  const [ouvert, setOuvert] = useState(niveau < 2);
-  const aEnfants = n.enfants.length > 0;
-  return (
-    <div style={{ marginLeft: niveau === 0 ? 0 : 18, borderLeft: niveau === 0 ? "none" : "1px solid var(--adsum-line)", paddingLeft: niveau === 0 ? 0 : 12, marginTop: 6 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", border: "1px solid var(--adsum-line)", borderRadius: 10, background: "var(--adsum-panel)", borderLeft: `4px solid ${n.couleur || "var(--adsum-acc)"}` }}>
-        {aEnfants && (
-          <button type="button" onClick={() => setOuvert((o) => !o)} aria-label={ouvert ? "Replier" : "Deplier"}
-            style={{ width: 22, height: 22, borderRadius: 6, border: "1px solid var(--adsum-line)", background: "var(--adsum-bg)", cursor: "pointer", flexShrink: 0, fontWeight: 700 }}>
-            {ouvert ? "-" : "+"}
-          </button>
-        )}
-        {n.photo_url && <img src={n.photo_url} alt="" style={{ width: 30, height: 30, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />}
-        <div style={{ minWidth: 0 }}>
-          <div style={{ fontWeight: 700, fontSize: 13.5 }}>{n.nom || n.membre_nom || "Sans nom"}</div>
-          <div className="muted" style={{ fontSize: 11.5 }}>
-            {[n.sous_titre, n.membre_nom && n.membre_nom !== n.nom ? n.membre_nom : null, n.effectif ? `${n.effectif} membre(s)` : null].filter(Boolean).join(" · ")}
-          </div>
-        </div>
-      </div>
-      {aEnfants && ouvert && n.enfants.map((e) => <Carte key={e.id} n={e} niveau={niveau + 1} />)}
-    </div>
-  );
-}
+import { type OrgContenu, type OrgContenuPublie, type OrgNode } from "../../api.js";
+import { getOrganigrammePublie } from "../../lib/store.js";
+import { OrgCanvas } from "./OrgCanvas.js";
+import { OrgDetailPanel } from "./OrgDetailPanel.js";
+import "./organigramme-badges.css";
 
 /**
- * Read-only consultation of the published organisation chart inside collaboration,
- * so collaborators can verify who holds which responsibility and how units relate.
- * A collapsible hierarchical tree (never editable here; editing stays in the back
- * office). Reaches the shared ``GET /organigramme/publie`` endpoint.
+ * Collaboration read-only view of the PUBLISHED organisation chart. It renders the
+ * exact same React-Flow tree as the back office (same OrgCanvas engine, nodes, links,
+ * colours and legend), in consultation mode: zoom, pan, search, fit and collapse are
+ * available, nothing can be edited. Editing happens only in the back office.
  */
 export function OrganigrammeView(): JSX.Element {
-  const [data, setData] = useState<OrganigrammePublie | null>(null);
-  const [err, setErr] = useState<string | null>(null);
-  const [q, setQ] = useState("");
+  const [data, setData] = useState<OrgContenuPublie | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [detailNode, setDetailNode] = useState<OrgNode | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [centerToken, setCenterToken] = useState(0);
 
   useEffect(() => {
-    void getOrganigrammePublie().then(setData).catch((e) => setErr(e instanceof Error ? e.message : "Erreur"));
+    let alive = true;
+    setLoading(true);
+    setError(null);
+    getOrganigrammePublie()
+      .then((d) => alive && setData(d as unknown as OrgContenuPublie))
+      .catch((e) => alive && setError(e instanceof Error ? e.message : "Erreur"))
+      .finally(() => alive && setLoading(false));
+    return () => { alive = false; };
   }, []);
 
-  const arbre = useMemo(() => (data ? construireArbre(data.noeuds, data.liens) : []), [data]);
-  const filtres = useMemo(() => {
-    if (!q.trim() || !data) return null;
-    const t = q.toLowerCase();
-    return data.noeuds.filter((n) => `${n.nom ?? ""} ${n.membre_nom ?? ""} ${n.sous_titre ?? ""}`.toLowerCase().includes(t));
-  }, [q, data]);
+  if (loading) return <div className="page" style={{ padding: 16 }}><p className="muted">Chargement de l'organigramme...</p></div>;
+  if (error) return <div className="page" style={{ padding: 16 }}><p className="muted">{error}</p></div>;
 
-  if (err) return <div className="page"><p className="small" style={{ color: "var(--adsum-danger)" }}>{err}</p></div>;
-  if (!data) return <div className="page"><p className="muted">Chargement de l'organigramme...</p></div>;
+  const publieLe = data?.version?.publie_le ? new Date(data.version.publie_le).toLocaleDateString("fr-FR") : null;
 
   return (
-    <div className="page" style={{ maxWidth: 820, margin: "0 auto", padding: 16 }}>
-      <header style={{ marginBottom: 14 }}>
-        <h1 style={{ margin: 0, fontSize: 22 }}>Organigramme hiérarchique</h1>
+    <div className="page" style={{ maxWidth: 1100, margin: "0 auto", padding: 16 }}>
+      <header style={{ marginBottom: 12 }}>
+        <h1 style={{ margin: 0, fontSize: 22 }}>Organigramme publié</h1>
         <p className="muted" style={{ fontSize: 13 }}>
-          {data.version ? `Version publiée : ${data.version.libelle}. ` : ""}Consultation seule. La modification se fait dans le back-office.
+          Consultez la structure officielle publiée de l'organisation.{publieLe ? ` Publié le ${publieLe}.` : ""} Consultation seule : la modification se fait dans le back-office.
         </p>
       </header>
-      <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Rechercher une personne, une fonction, une unité"
-        style={{ width: "100%", height: 38, borderRadius: 9, border: "1px solid var(--adsum-line)", padding: "0 12px", fontSize: 13.5, marginBottom: 12 }} />
 
-      {!data.version || data.noeuds.length === 0 ? (
+      {!data || !data.version ? (
         <p className="muted">Aucun organigramme publié pour le moment.</p>
-      ) : filtres ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          <p className="muted small">{filtres.length} résultat(s)</p>
-          {filtres.map((n) => (
-            <div key={n.id} style={{ padding: "8px 10px", border: "1px solid var(--adsum-line)", borderRadius: 10, background: "var(--adsum-panel)", borderLeft: `4px solid ${n.couleur || "var(--adsum-acc)"}` }}>
-              <div style={{ fontWeight: 700, fontSize: 13.5 }}>{n.nom || n.membre_nom}</div>
-              <div className="muted" style={{ fontSize: 11.5 }}>{[n.sous_titre, n.membre_nom].filter(Boolean).join(" · ")}</div>
-            </div>
-          ))}
-        </div>
       ) : (
-        arbre.map((r) => <Carte key={r.id} n={r} niveau={0} />)
+        <div style={{ position: "relative", height: "min(76vh, 720px)", border: "1px solid var(--adsum-line)", borderRadius: 14, overflow: "hidden", background: "var(--adsum-panel)" }}>
+          <OrgCanvas
+            contenu={data as OrgContenu}
+            mode="consultation"
+            onSelectNode={(n) => { setDetailNode(n); setSelectedId(n.id); }}
+            selectedNodeId={selectedId}
+            centerToken={centerToken}
+          />
+          {detailNode ? (
+            <OrgDetailPanel
+              node={detailNode}
+              stats={null}
+              canEdit={false}
+              onClose={() => setDetailNode(null)}
+              onCenter={() => setCenterToken((t) => t + 1)}
+              onEdit={() => undefined}
+            />
+          ) : null}
+        </div>
       )}
     </div>
   );
