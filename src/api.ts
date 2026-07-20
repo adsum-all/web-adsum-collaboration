@@ -584,3 +584,77 @@ export function uploadInformationMedia(
 ): Promise<Information> {
   return authedSend(`/api/v1/admin/informations/${id}/media`, token, "POST", { kind, data_url: dataUrl }, "Envoi du média impossible");
 }
+
+// --- Organisation chart types (kept in exact sync with the back office), so the SAME
+// React-Flow renderer draws the published version identically in this read-only view.
+export type OrgVersionStatut = "brouillon" | "publie" | "archive";
+export interface OrganigrammeVersion {
+  id: string;
+  libelle: string;
+  statut: OrgVersionStatut;
+  note: string | null;
+  cree_le: string;
+  publie_le: string | null;
+}
+export type OrgNodeType = "personne" | "structure" | "groupe" | "separateur" | "note" | "zone";
+export type OrgCategorie = "titre" | "fonction_speciale" | "fonction" | "fonction_particuliere" | null;
+export type OrgUniteType = "commission" | "coordination" | "intendance" | "tribu" | "college" | "groupe" | null;
+export type OrgStatut = "actif" | "vacant" | "attente" | "archive";
+export interface OrgNode {
+  id: string;
+  cle: string;
+  type_noeud: OrgNodeType;
+  nom: string;
+  sous_titre: string | null;
+  membre_id: string | null;
+  membre_nom: string | null;
+  photo_url: string | null;
+  afficher_photo: boolean;
+  couleur: string | null;
+  fonction_cle: string | null;
+  categorie: OrgCategorie;
+  unite_type: OrgUniteType;
+  unite_id: string | null;
+  effectif: number | null;
+  statut: OrgStatut;
+  pos_x: number | null;
+  pos_y: number | null;
+  largeur: number | null;
+  hauteur: number | null;
+  ordre: number | null;
+}
+export type OrgLinkType = "hierarchique" | "coordination" | "supervision" | "suivi_transversal" | "responsabilite_tribu" | "assistance";
+export interface OrgLink {
+  id: string;
+  source_id: string;
+  cible_id: string;
+  type_lien: OrgLinkType;
+  libelle: string | null;
+}
+export interface OrgContenu {
+  version: OrganigrammeVersion;
+  noeuds: OrgNode[];
+  liens: OrgLink[];
+}
+export interface OrgContenuPublie {
+  version: OrganigrammeVersion | null;
+  noeuds: OrgNode[];
+  liens: OrgLink[];
+}
+export interface OrgAnomalie { code: string; libelle: string; nombre: number }
+export interface OrgStatistiques {
+  affectations: { effectif_unique: number; affectations_actives: number; membres_en_cumul: number; ecart_cumul: number; principales: number; secondaires: number };
+  placement: { membres_places: number; intendances: number; coordinations: number; commissions: number; tribus: number; bergers: number };
+  anomalies: OrgAnomalie[];
+}
+export interface CategorieAttributionOrg { code: string; label: string }
+export const CATEGORIES_ATTRIBUTION: readonly CategorieAttributionOrg[] = [
+  { code: "titre", label: "Titre" },
+  { code: "fonction_speciale", label: "Fonction spéciale" },
+  { code: "fonction", label: "Fonction" },
+  { code: "fonction_particuliere", label: "Fonction particulière" },
+];
+
+export function getOrganigrammeStatistiquesCollab(token: string): Promise<OrgStatistiques> {
+  return authedGet<OrgStatistiques>("/api/v1/organigramme/statistiques", token, "Statistiques indisponibles");
+}
