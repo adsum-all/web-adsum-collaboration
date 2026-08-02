@@ -25,6 +25,7 @@ import {
   updateInformation,
   uploadInformationMedia,
 } from "../../api.js";
+import { useMarque } from "../../useMarque.js";
 import { InformationConfirm } from "./InformationConfirm.js";
 import { DiffusionControls } from "./InformationDiffusionControls.js";
 import { InformationSuivi } from "./InformationSuivi.js";
@@ -67,6 +68,7 @@ export function InformationEditor({
   onClose,
   onSaved,
 }: Readonly<{ token: string; info: Information | null; cibles: CibleReference[]; onClose: () => void; onSaved: () => void }>): JSX.Element {
+  const marque = useMarque();
   const [form, setForm] = useState<InformationInput>(() =>
     info
       ? { titre: info.titre, sous_titre: info.sous_titre ?? "", contenu: info.contenu, priorite: info.priorite, auteur: info.auteur ?? "", signature: info.signature ?? "", signature_url: info.signature_url ?? "", protege: info.protege, institutionnelle: info.institutionnelle, affiche_entete: info.affiche_entete, canaux: info.canaux ?? ["application", "telegram"], requiert_accuse: info.requiert_accuse, lecture_vocale_auto: info.lecture_vocale_auto, lien_url: info.lien_url ?? "", action_label: info.action_label ?? "", action_url: info.action_url ?? "", expire_le: info.expire_le, epingle_jusqu: info.epingle_jusqu, cibles: info.cibles }
@@ -235,20 +237,21 @@ export function InformationEditor({
 
           <div className="field">
             <span>Signature (facultative)</span>
-            <input value={form.signature ?? ""} onChange={(e) => set("signature", e.target.value)} maxLength={200} disabled={!contenuEditable} placeholder="Ex : Le Sacerdoce Royal" />
+            <input value={form.signature ?? ""} onChange={(e) => set("signature", e.target.value)} maxLength={200} disabled={!contenuEditable} placeholder={`Ex : ${marque.organisation}`} />
             {contenuEditable && (
               <div className="info-auteur-btns">
-                <button type="button" className="btn btn-ghost btn-inline" onClick={() => set("signature", "Le Sacerdoce Royal")}>Le Sacerdoce Royal</button>
-                <button type="button" className="btn btn-ghost btn-inline" onClick={() => set("signature", "Le Fondateur")}>Le Fondateur</button>
-                <button type="button" className="btn btn-ghost btn-inline" onClick={() => set("signature", "Le Berger des Missions")}>Le Berger des Missions</button>
-                <button type="button" className="btn btn-ghost btn-inline" onClick={() => set("signature", "La Modératrice")}>La Modératrice</button>
-                <button type="button" className="btn btn-ghost btn-inline" onClick={() => set("signature", "Le Secrétariat Général")}>Le Secrétariat Général</button>
-                <button type="button" className="btn btn-ghost btn-inline" onClick={() => set("signature", "L'Administration")}>L'Administration</button>
+                {/* The organisation signs in its own name. These shortcuts used to be
+                    six literals naming one organisation's roles, so a parish was
+                    offered "Le Berger des Missions" to sign its announcements. What
+                    remains names no organisation in particular; anything else is
+                    typed, which is what the field is for. */}
+                <button type="button" className="btn btn-ghost btn-inline" onClick={() => set("signature", marque.organisation)}>{marque.organisation}</button>
+                <button type="button" className="btn btn-ghost btn-inline" onClick={() => set("signature", "L'Administration")}>L&apos;Administration</button>
                 {monNom && <button type="button" className="btn btn-ghost btn-inline" onClick={() => set("signature", monNom)}>Mon nom</button>}
               </div>
             )}
           </div>
-          <label className="field"><span>Lien de signature (site officiel, facultatif)</span><input value={form.signature_url ?? ""} onChange={(e) => set("signature_url", e.target.value)} placeholder="https://sacerdoceroyal.info" disabled={!contenuEditable} /></label>
+          <label className="field"><span>Lien de signature (site officiel, facultatif)</span><input value={form.signature_url ?? ""} onChange={(e) => set("signature_url", e.target.value)} placeholder={marque.site ?? "https://exemple.org"} disabled={!contenuEditable} /></label>
           {editable && (
             <>
               <p className="field-group-title">Note vocale</p>

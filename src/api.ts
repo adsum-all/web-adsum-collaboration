@@ -82,6 +82,8 @@ export interface LoginResult {
   otpRequired: boolean;
   session: Session | null;
   canal: string | null;
+  /** Why the mailbox refused our last messages, when it did. Null otherwise. */
+  alerteEmail: string | null;
 }
 
 function loginError(status: number): ApiError {
@@ -98,11 +100,12 @@ export async function login(email: string, password: string): Promise<LoginResul
     body: JSON.stringify({ email, password }),
   });
   if (!res.ok) throw loginError(res.status);
-  const data = (await res.json()) as { otp_required?: boolean; access_token?: string | null; role?: Role; canal?: string | null };
+  const data = (await res.json()) as { otp_required?: boolean; access_token?: string | null; role?: Role; canal?: string | null; alerte_email?: string | null };
   return {
     otpRequired: Boolean(data.otp_required),
     session: data.access_token ? { token: data.access_token, role: data.role ?? "", email } : null,
     canal: data.canal ?? null,
+    alerteEmail: data.alerte_email ?? null,
   };
 }
 
@@ -536,9 +539,31 @@ export interface CibleReference {
   type_regle: string;
 }
 
-export function listInformations(token: string, statut?: InformationStatut): Promise<Information[]> {
-  const q = statut ? `?statut=${statut}` : "";
-  return authedGet(`/api/v1/admin/informations${q}`, token, "Informations indisponibles");
+export interface PageInformations {
+  items: Information[];
+  total: number;
+  page: number;
+  taille: number;
+  pages: number;
+}
+
+/** Paginated list. Media payloads are not carried here: each item advertises which
+ * media exist through `medias`, and opening one information fetches the content. */
+export function listInformationsPage(
+  token: string,
+  opts: { statut?: InformationStatut; page?: number; taille?: number } = {},
+): Promise<PageInformations> {
+  const p = new URLSearchParams();
+  if (opts.statut) p.set("statut", opts.statut);
+  p.set("page", String(opts.page ?? 1));
+  p.set("taille", String(opts.taille ?? 10));
+  return authedGet(`/api/v1/admin/informations?${p.toString()}`, token, "Informations indisponibles");
+}
+
+/** Kept for callers that just want the current page as a plain array. */
+export async function listInformations(token: string, statut?: InformationStatut): Promise<Information[]> {
+  const page = await listInformationsPage(token, { statut, taille: 100 });
+  return page.items;
 }
 
 export function createInformation(token: string, input: InformationInput): Promise<Information> {
