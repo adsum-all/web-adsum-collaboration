@@ -3,7 +3,13 @@
 # continuous deployment to Cloudflare Pages on develop).
 # Continuous deployment activates once these protected CI/CD variables are set:
 #   CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, CF_PAGES_PROJECT (= adsum-collaboration)
+# Declaring stages here REPLACES the list the shared templates declare, so every
+# stage they use has to appear. "audit" was missing, and the Constitution audit job
+# the templates bring in had nowhere to run: the pipeline was refused at creation,
+# with no job and no visible failure, which reads as a broken repository rather than
+# a one-line mistake. It sits first because it gates everything after it.
 stages:
+  - audit
   - quality
   - test
   - build
