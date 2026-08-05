@@ -1,6 +1,7 @@
 import type { JSX } from "react";
 
 import { peutConsulterInformations, peutCreerModeles } from "../../lib/store.js";
+import { useMarque } from "../../useMarque.js";
 
 export type Route =
   | { kind: "accueil" }
@@ -64,6 +65,7 @@ export function Sidebar({
   route, onNavigate, currentInitials, currentNom, onQuitter,
   nbNotifsNonLues = 0, nbCanalNouveaux = 0, collapsed = false, onToggleCollapse, onCloseDrawer,
 }: SidebarProps): JSX.Element {
+  const marque = useMarque();
   // Fixed, scalable navigation: the sidebar never lists the workspaces themselves
   // (that list lives on the "Espaces de travail" page). Two primary destinations
   // ("Espaces de travail", "Canal d'instructions") plus personal shortcuts.
@@ -86,9 +88,9 @@ export function Sidebar({
     <aside className="sidebar" aria-label="Menu latéral">
       <div className="sidebar-top">
         <button type="button" className="brand brand-btn" onClick={() => onNavigate({ kind: "accueil" })} aria-label="Retour à l'accueil">
-          <span className="brand-logo" aria-hidden="true">A</span>
+          <span className="brand-logo" aria-hidden="true">{marque.initiale}</span>
           <span className="brand-text">
-            ADSUM
+            {marque.marque}
             <span className="brand-sub">SACERDOCE ROYAL</span>
           </span>
         </button>
